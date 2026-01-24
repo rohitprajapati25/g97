@@ -1,0 +1,10 @@
+{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NWVhYzhiNGEwMDBmNmZmMDE0ZDgzYiIsImlhdCI6MTc2NzgxMjI2NiwiZXhwIjoxNzY3ODk4NjY2fQ.0ZftxI3-MCagbHa6Bmb_naKq-mdAQxTbkxk-KhIGVYs",
+    "admin": {
+        "_id": "695eac8b4a000f6ff014d83b",
+        "name": "Admin",
+        "email": "admin@gmail.com",
+        "password": "$2b$10$yeMZYNK6ioBz.C5NclYove7ARssh.5v8KYjuA5ay9kxxUN2XsknqK",
+        "__v": 0
+    }
+}
