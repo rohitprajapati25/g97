@@ -20,18 +20,11 @@ import { attachLoader } from "./api/axios";
 
 
 function App() {
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    // Axios ko loading state control karne ki power de di
-    attachLoader(setLoading);
-  }, []);
+ 
   return (
     <>
     <BrowserRouter>
-      {loading && <Loader />}
       <Routes>
-
-
         {/* PUBLIC PAGES */}
         <Route path="/" element={<Home />} />
         <Route path="/services" element={<UserServices />} />

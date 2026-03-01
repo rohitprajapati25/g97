@@ -1,84 +1,131 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import { Package, Layers, CalendarCheck } from "lucide-react";
+import { Package, Layers, CalendarCheck, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState({ services: 0, products: 0, bookings: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get("/dashboard")
-      .then((res) => setData(res.data))
-      .catch(() => alert("Dashboard load failed"))
-      .finally(() => setLoading(false));
+    const fetchDashboardData = async () => {
+      try {
+        // Token check: Agar token nahi hai to request header mein nahi jayega
+        const token = localStorage.getItem("adminToken");
+        const res = await api.get("/dashboard", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setData(res.data);
+      } catch (err) {
+        console.error("Dashboard Error:", err);
+        // Alert ki jagah hum console pe error dekh rahe hain taaki screen block na ho
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen bg-[#F8F9FA]">
-        <div className="animate-spin h-10 w-10 border-4 border-red-600 border-t-transparent rounded-full mb-4"></div>
-        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading Dashboard...</p>
+      <div className="flex flex-col justify-center items-center h-screen bg-[#050507]">
+        <div className="relative">
+            <div className="h-16 w-16 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 blur-xl bg-red-600/20 animate-pulse"></div>
+        </div>
+        <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px] mt-6">Initializing System...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8 bg-[#F8F9FA] min-h-screen">
-      <div className="max-w-6xl mx-auto">
+    <div className="p-8 bg-[#050507] min-h-screen text-white">
+      <div className="max-w-7xl mx-auto">
         
-        {/* HEADER */}
-        <div className="mb-10">
-          <h2 className="text-4xl font-black text-slate-900 uppercase italic">
-            Admin <span className="text-red-600">Dashboard</span>
-          </h2>
-          <div className="h-1.5 w-20 bg-slate-900 mt-2"></div>
+        {/* HEADER SECTION */}
+        <div className="mb-12 flex items-end justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+                <span className="h-2 w-2 rounded-full bg-red-600"></span>
+                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Real-time Analytics</p>
+            </div>
+            <h2 className="text-5xl font-black uppercase italic tracking-tighter">
+              Studio <span className="text-red-600">Overview</span>
+            </h2>
+          </div>
+          <div className="hidden md:block text-right">
+             <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Auto Hub Detailing Studio</p>
+             <p className="text-zinc-400 text-sm font-black italic">v2.0.4 Admin</p>
+          </div>
         </div>
 
         {/* STATS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
           {/* SERVICES CARD */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-6 hover:shadow-md transition-shadow">
-            <div className="bg-blue-50 text-blue-600 p-5 rounded-2xl">
-              <Layers size={32} />
-            </div>
-            <div>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Services</p>
-              <h3 className="text-3xl font-black text-slate-900 italic">
-                {data.services}
-              </h3>
-            </div>
-          </div>
+          <StatCard 
+            title="Total Services" 
+            value={data?.services || 0} 
+            icon={<Layers size={28} />} 
+            color="border-blue-500/20"
+            iconColor="text-blue-500"
+          />
 
           {/* PRODUCTS CARD */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-6 hover:shadow-md transition-shadow">
-            <div className="bg-emerald-50 text-emerald-600 p-5 rounded-2xl">
-              <Package size={32} />
-            </div>
-            <div>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Products</p>
-              <h3 className="text-3xl font-black text-slate-900 italic">
-                {data.products}
-              </h3>
-            </div>
-          </div>
+          <StatCard 
+            title="Total Products" 
+            value={data?.products || 0} 
+            icon={<Package size={28} />} 
+            color="border-emerald-500/20"
+            iconColor="text-emerald-500"
+          />
 
           {/* BOOKINGS CARD */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-6 hover:shadow-md transition-shadow">
-            <div className="bg-red-50 text-red-600 p-5 rounded-2xl">
-              <CalendarCheck size={32} />
-            </div>
-            <div>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Bookings</p>
-              <h3 className="text-3xl font-black text-slate-900 italic">
-                {data.bookings}
-              </h3>
-            </div>
-          </div>
+          <StatCard 
+            title="Total Bookings" 
+            value={data?.bookings || 0} 
+            icon={<CalendarCheck size={28} />} 
+            color="border-red-500/20"
+            iconColor="text-red-600"
+          />
 
+        </div>
+
+        {/* RECENT ACTIVITY PLACEHOLDER */}
+        <div className="mt-12 p-8 rounded-[2.5rem] bg-zinc-900/30 border border-white/5 backdrop-blur-md">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-black uppercase italic tracking-tight">Recent Detailing Orders</h3>
+                <button className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition">View All Orders</button>
+            </div>
+            <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                <TrendingUp size={40} className="mx-auto text-zinc-800 mb-4" />
+                <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">No recent activity detected</p>
+            </div>
         </div>
       </div>
     </div>
   );
+}
+
+// Reusable StatCard Component for clean look
+function StatCard({ title, value, icon, color, iconColor }) {
+    return (
+      <div className={`group relative bg-zinc-900/50 p-8 rounded-[2.5rem] border ${color} hover:bg-zinc-900 transition-all duration-500`}>
+        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+            {icon}
+        </div>
+        <div className={`${iconColor} mb-6 p-4 bg-zinc-950 inline-block rounded-2xl border border-white/5 shadow-inner`}>
+          {icon}
+        </div>
+        <div>
+          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-2">{title}</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-5xl font-black text-white italic tracking-tighter">
+              {value}
+            </h3>
+            <span className="text-xs font-bold text-zinc-700 uppercase italic">Units</span>
+          </div>
+        </div>
+      </div>
+    );
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../assets/T-Logo.png";
+import logo from "../assets/logo.png";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -12,7 +12,6 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Scroll effect for navbar background
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -44,44 +43,43 @@ function Navbar() {
 
   return (
     <nav 
-      className={`fixed top-0 inset-x-0 z-[100] transition-all duration-300 ${
+      className={`fixed top-0 inset-x-0 z-[100] transition-all duration-500 ${
         scrolled 
-          ? "bg-black/80 backdrop-blur-xl border-b border-white/10 py-2" 
-          : "bg-black bg-opacity-10 py-4 shadow-xl"
+          ? "bg-[#050507]/90 backdrop-blur-2xl border-b border-white/5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" 
+          : "bg-transparent py-6"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         
-        {/* --- LOGO --- */}
+        {/* --- LOGO SECTION --- */}
         <div
           onClick={() => navigate("/")}
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center cursor-pointer group relative"
         >
-          <div className="relative">
-            <div className="absolute -inset-1 bg-red-600 rounded-full blur opacity-0 group-hover:opacity-40 transition duration-500"></div>
-            <img src={logo} alt="Logo" className="relative h-10 w-auto transform transition group-hover:scale-110" />
-          </div>
-          <span className="text-xl font-black text-white tracking-tighter uppercase italic">
-            G97 <span className="text-red-600 not-italic">AUTO</span>
-          </span>
+          {/* Subtle logo background glow using Logo Colors */}
+          <div className="absolute -inset-6 bg-gradient-to-r from-red-600/10 to-blue-600/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition duration-700"></div>
+          
+          <img 
+            src={logo} 
+            alt="Auto Hub Detailing Studio" 
+            className="relative h-10 w-auto md:h-14 object-contain transform transition duration-500 group-hover:scale-105" 
+          />
         </div>
 
         {/* --- ACTIONS --- */}
-        <div className="flex items-center gap-4">
-          
-          {/* GUEST LINKS */}
+        <div className="flex items-center gap-6">
           {!userToken && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <Link
                 to="/user/login"
-                className="text-gray-300 hover:text-white px-4 py-2 text-sm font-medium transition"
+                className="text-zinc-400 hover:text-white px-3 py-2 text-[11px] font-black uppercase tracking-widest transition-colors"
               >
                 Sign In
               </Link>
               
               <Link
                 to="/user/register"
-                className="hidden md:block px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition"
+                className="hidden md:block px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-[0.15em] hover:bg-white/10 hover:border-white/20 transition-all"
               >
                 Join Now
               </Link>
@@ -90,69 +88,67 @@ function Navbar() {
 
               <Link
                 to="/Login"
-                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all hover:-translate-y-0.5"
+                className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_25px_rgba(220,38,38,0.4)] transition-all hover:-translate-y-0.5 active:scale-95"
               >
-                Admin Panel
+                ADMIN
               </Link>
             </div>
           )}
 
-          {/* USER PROFILE */}
           {userToken && (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowProfile(!showProfile)}
-                className="flex items-center gap-2 p-1 pr-3 rounded-full bg-white/5 border border-white/50 hover:bg-white/20 transition group"
+                className="flex items-center gap-3 p-1.5 pr-4 rounded-2xl bg-zinc-900/40 border border-white/5 hover:border-red-600/40 hover:bg-zinc-800/80 transition-all duration-300 group shadow-xl"
               >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-red-600 to-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-inner">
+                {/* Profile Avatar matching Logo Gradient (Red to Blue) */}
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 via-red-500 to-[#1E3A8A] flex items-center justify-center text-white text-[11px] font-black shadow-[0_5px_15px_rgba(220,38,38,0.3)] ring-1 ring-white/20">
                   {getInitials(userName)}
                 </div>
                 
-                <span className="hidden sm:block text-white text-sm font-semibold">
+                <span className="hidden sm:block text-zinc-200 text-[11px] font-black uppercase tracking-widest group-hover:text-white transition-colors">
                   {userName?.split(' ')[0] || "User"}
                 </span>
 
                 <svg
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${showProfile ? "rotate-180" : ""}`}
+                  className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-500 ${showProfile ? "rotate-180 text-red-500" : ""}`}
                   fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
               {/* DROPDOWN MENU */}
               {showProfile && (
-                <div className="absolute right-0 mt-4 w-72 origin-top-right rounded-2xl bg-zinc-900 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-2xl">
-                  {/* Header */}
-                  <div className="px-6 py-5 bg-white/[0.03] border-b border-white/5">
-                    <p className="text-white font-bold text-base">{userName || "User"}</p>
-                    <p className="text-gray-500 text-xs truncate mt-0.5">{userEmail}</p>
+                <div className="absolute right-0 mt-4 w-64 origin-top-right rounded-[2rem] bg-[#0a0a0c] border border-white/10 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.9)] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in duration-300">
+                  <div className="px-6 py-5 bg-gradient-to-br from-white/[0.05] to-transparent border-b border-white/5">
+                    <p className="text-white font-black text-xs uppercase tracking-[0.2em] italic">{userName || "User"}</p>
+                    <p className="text-zinc-500 text-[9px] font-bold truncate mt-1.5 uppercase tracking-widest leading-none">{userEmail}</p>
                   </div>
-
-                  {/* Links */}
-                  <div className="p-2">
+                  
+                  <div className="p-3">
                     <button
                       onClick={() => { navigate("/user/dashboard"); setShowProfile(false); }}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition"
+                      className="flex w-full items-center gap-4 px-4 py-3.5 text-[10px] font-black text-zinc-400 hover:bg-white/5 hover:text-white rounded-2xl transition-all group uppercase tracking-widest"
                     >
-                      <span className="text-lg opacity-50">📊</span> Dashboard
+                      <span className="text-sm grayscale group-hover:grayscale-0 transition-all">📊</span> Dashboard
                     </button>
                     
                     <button
                       onClick={() => { navigate("/user/bookings"); setShowProfile(false); }}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition"
+                      className="flex w-full items-center gap-4 px-4 py-3.5 text-[10px] font-black text-zinc-400 hover:bg-white/5 hover:text-white rounded-2xl transition-all group uppercase tracking-widest"
                     >
-                      <span className="text-lg opacity-50">📅</span> My Bookings
+                      <span className="text-sm grayscale group-hover:grayscale-0 transition-all">📅</span> My Bookings
                     </button>
                   </div>
 
-                  {/* Footer/Logout */}
-                  <div className="p-2 border-t border-white/5 bg-red-500/5">
+                  <div className="p-3 border-t border-white/5 bg-red-600/[0.02]">
                     <button
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition duration-300"
+                      className="flex w-full items-center justify-between px-5 py-4 text-[10px] font-black text-red-500 hover:bg-red-600 hover:text-white rounded-[1.2rem] transition-all duration-300 uppercase tracking-[0.2em]"
                     >
-                      <span className="text-lg">Logout</span>
+                      Sign Out
+                      <LogOutIcon />
                     </button>
                   </div>
                 </div>
@@ -164,5 +160,12 @@ function Navbar() {
     </nav>
   );
 }
+
+// Small helper icon for logout
+const LogOutIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
+    </svg>
+);
 
 export default Navbar;

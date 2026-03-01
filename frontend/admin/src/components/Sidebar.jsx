@@ -5,19 +5,17 @@ import {
   Package, 
   CalendarDays, 
   LogOut,
-  Settings
+  Settings,
+  UserCircle
 } from "lucide-react";
+import logo from "../assets/logo.png"; // New Logo Import
 
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. Agar logo 'public' folder mein hai to seedha "/logo.png" use hota hai.
-  // 2. Agar logo 'src/assets' mein hai to upar import karna padega.
-  const logoPath = "src/assets/T-Logo.png"; 
-
   const handleLogout = () => {
-    if (window.confirm("Confirm Logout from G97 Admin?")) {
+    if (window.confirm("Confirm Logout from Auto Hub Admin?")) {
       localStorage.removeItem("adminToken");
       navigate("/");
     }
@@ -26,65 +24,60 @@ function Sidebar() {
   const isActive = (path) => location.pathname === path;
 
   const menuItems = [
-    { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={20} /> },
-    { name: "Services", path: "/admin/services", icon: <Wrench size={20} /> },
-    { name: "Products", path: "/admin/products", icon: <Package size={20} /> },
-    { name: "Bookings", path: "/bookings", icon: <CalendarDays size={20} /> },
+    { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
+    { name: "Services", path: "/admin/services", icon: <Wrench size={18} /> },
+    { name: "Products", path: "/admin/products", icon: <Package size={18} /> },
+    { name: "Bookings", path: "/bookings", icon: <CalendarDays size={18} /> },
   ];
 
   return (
-    <aside className="w-72 bg-[#0a0f18] text-white min-h-screen p-6 flex flex-col border-r border-white/5 shadow-2xl relative z-50">
+    <aside className="w-72 bg-[#050507] text-white min-h-screen p-6 flex flex-col border-r border-white/5 shadow-2xl relative z-50">
       
       {/* 🏎️ BRAND LOGO SECTION */}
-      <div className="flex items-center gap-4 mb-12 px-2 mt-4">
-        <div className="relative group">
+      <div className="flex flex-col items-center mb-10 px-2 mt-4">
+        <div className="relative group cursor-pointer" onClick={() => navigate("/dashboard")}>
           {/* Logo Glow Effect */}
-          <div className="absolute -inset-1 bg-red-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+          <div className="absolute -inset-4 bg-red-600/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition duration-700"></div>
           
-          <div className="relative bg-slate-900 w-12 h-12 rounded-xl border border-white/10 flex items-center justify-center overflow-hidden">
-            <img 
-              src={logoPath} 
-              alt="G97" 
-              className="w-full h-full object-cover bg-white p-1.5"
-              onError={(e) => {
-                // Agar logo nahi mila to fallback icon dikhega
-                e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = '<span class="text-red-600 font-black text-xl italic">G</span>';
-              }} 
-            />
-          </div>
+          <img 
+            src={logo} 
+            alt="Auto Hub Logo" 
+            className="relative h-14 w-auto object-contain transform transition duration-500 group-hover:scale-105" 
+          />
         </div>
-
-        <div>
-          <h2 className="text-xl font-black uppercase italic leading-none tracking-tighter">
-            G97 <span className="text-red-600 italic underline decoration-2 underline-offset-4">AUTO</span>
-          </h2>
-          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-1.5">Precision Care</p>
+        
+        <div className="mt-4 text-center">
+          <div className="flex items-center gap-2 justify-center">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse"></span>
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Admin Control</p>
+          </div>
         </div>
       </div>
 
       {/* 🧭 NAVIGATION LINKS */}
-      <nav className="flex-1 space-y-1.5">
+      <nav className="flex-1 space-y-2">
+        <p className="px-4 text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4">Main Menu</p>
+        
         {menuItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
-            className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-300 group relative ${
+            className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group relative ${
               isActive(item.path)
-                ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-900/20"
-                : "text-slate-400 hover:bg-white/5 hover:text-white"
+                ? "bg-gradient-to-r from-red-600/20 to-transparent text-white border-l-2 border-red-600"
+                : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
             }`}
           >
-            <span className={`${isActive(item.path) ? "text-white" : "text-slate-500 group-hover:text-red-500"} transition-colors duration-300`}>
+            <span className={`${isActive(item.path) ? "text-red-500" : "text-zinc-600 group-hover:text-red-500"} transition-colors duration-300`}>
               {item.icon}
             </span>
-            <span className="font-bold uppercase tracking-[0.15em] text-[10px]">
+            <span className={`font-bold uppercase tracking-widest text-[10px] ${isActive(item.path) ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`}>
               {item.name}
             </span>
 
-            {/* Active Indicator Bar */}
+            {/* Active Glow */}
             {isActive(item.path) && (
-              <div className="absolute left-0 w-1 h-6 bg-white rounded-r-full"></div>
+              <div className="absolute inset-0 bg-red-600/5 blur-xl -z-10"></div>
             )}
           </Link>
         ))}
@@ -92,19 +85,27 @@ function Sidebar() {
 
       {/* ⚙️ BOTTOM SECTION */}
       <div className="mt-auto space-y-2 pt-6 border-t border-white/5">
-        <button className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:text-white transition-all text-xs font-bold uppercase tracking-widest">
-           <Settings size={18} />
+        <div className="px-4 py-3 flex items-center gap-3 mb-4 rounded-xl bg-zinc-900/50 border border-white/5">
+            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 text-red-500">
+                <UserCircle size={20} />
+            </div>
+            <div className="overflow-hidden">
+                <p className="text-[10px] font-black text-white truncate uppercase tracking-tighter">Super Admin</p>
+                <p className="text-[8px] font-medium text-zinc-500 truncate lowercase">admin@autohub.com</p>
+            </div>
+        </div>
+
+        <button className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-zinc-500 hover:text-white transition-all text-[10px] font-bold uppercase tracking-widest group">
+           <Settings size={16} className="group-hover:rotate-45 transition-transform duration-500" />
            <span>Settings</span>
         </button>
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl text-slate-400 hover:bg-red-600/10 hover:text-red-500 transition-all duration-300 group bg-slate-900/30 border border-white/5"
+          className="flex items-center gap-4 w-full px-4 py-4 rounded-xl text-red-500/70 hover:bg-red-600 hover:text-white transition-all duration-300 group shadow-lg"
         >
-          <div className="bg-slate-800 p-2 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-all shadow-lg">
-            <LogOut size={16} />
-          </div>
-          <span className="font-black uppercase tracking-widest text-[10px]">Logout</span>
+          <LogOut size={16} />
+          <span className="font-black uppercase tracking-widest text-[10px]">Logout System</span>
         </button>
       </div>
     </aside>
