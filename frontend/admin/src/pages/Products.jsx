@@ -82,7 +82,7 @@ function Products() {
   };
 
   return (
-    <div className="p-8 bg-[#050507] min-h-screen text-white font-sans">
+    <div className="p-8 bg-darkbg min-h-screen text-white font-sans">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}

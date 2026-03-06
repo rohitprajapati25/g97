@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react";
 
 const Loader = () => {
   return (
-    <div className="absolute h-full w-full inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0a0f18]/80 backdrop-blur-md">
+    <div className="absolute h-full w-full inset-0 z-[9999] flex flex-col items-center justify-center bg-darker/80 backdrop-blur-md">
       {/* Container for Animation */}
       <div className="relative flex items-center justify-center">
         

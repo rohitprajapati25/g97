@@ -28,7 +28,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen bg-[#050507]">
+      <div className="flex flex-col justify-center items-center h-screen bg-darkbg">
         <div className="relative">
             <div className="h-16 w-16 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
             <div className="absolute inset-0 blur-xl bg-red-600/20 animate-pulse"></div>
@@ -39,7 +39,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-8 bg-[#050507] min-h-screen text-white">
+    <div className="p-8 bg-darkbg min-h-screen text-white">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER SECTION */}

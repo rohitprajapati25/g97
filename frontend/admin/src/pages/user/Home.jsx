@@ -6,7 +6,7 @@ function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#050507] font-sans text-white overflow-x-hidden">
+    <div className="min-h-screen bg-darkbg font-sans text-white overflow-x-hidden">
       <Navbar />
 
       {/* --- HERO SECTION --- */}

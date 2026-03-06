@@ -47,7 +47,7 @@ function Bookings() {
   };
 
   return (
-    <div className="p-8 bg-[#050507] min-h-screen text-white font-sans">
+    <div className="p-8 bg-darkbg min-h-screen text-white font-sans">
       <div className="max-w-6xl mx-auto">
         
         {/* HEADER */}
@@ -117,7 +117,7 @@ function Bookings() {
             onClick={() => setSelectedBooking(null)}
           ></div>
           
-          <div className="relative bg-[#0a0a0c] w-full max-w-lg rounded-[3.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden animate-in fade-in zoom-in duration-300">
+          <div className="relative bg-darknav w-full max-w-lg rounded-[3.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden animate-in fade-in zoom-in duration-300">
             {/* Modal Header */}
             <div className="p-12 bg-zinc-900/50 border-b border-white/5 relative">
                 <button 

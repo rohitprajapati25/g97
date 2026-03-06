@@ -31,7 +31,7 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="w-72 bg-[#050507] text-white min-h-screen p-6 flex flex-col border-r border-white/5 shadow-2xl relative z-50">
+    <aside className="w-72 bg-darkbg text-white min-h-screen p-6 flex flex-col border-r border-white/5 shadow-2xl relative z-50">
       
       {/* 🏎️ BRAND LOGO SECTION */}
       <div className="flex flex-col items-center mb-10 px-2 mt-4">

@@ -45,7 +45,7 @@ function Navbar() {
     <nav 
       className={`fixed top-0 inset-x-0 z-[100] transition-all duration-500 ${
         scrolled 
-          ? "bg-[#050507]/90 backdrop-blur-2xl border-b border-white/5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" 
+          ? "bg-darkbg/90 backdrop-blur-2xl border-b border-white/5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" 
           : "bg-transparent py-6"
       }`}
     >
@@ -120,7 +120,7 @@ function Navbar() {
 
               {/* DROPDOWN MENU */}
               {showProfile && (
-                <div className="absolute right-0 mt-4 w-64 origin-top-right rounded-[2rem] bg-[#0a0a0c] border border-white/10 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.9)] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in duration-300">
+                <div className="absolute right-0 mt-4 w-64 origin-top-right rounded-[2rem] bg-darknav border border-white/10 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.9)] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in duration-300">
                   <div className="px-6 py-5 bg-gradient-to-br from-white/[0.05] to-transparent border-b border-white/5">
                     <p className="text-white font-black text-xs uppercase tracking-[0.2em] italic">{userName || "User"}</p>
                     <p className="text-zinc-500 text-[9px] font-bold truncate mt-1.5 uppercase tracking-widest leading-none">{userEmail}</p>
