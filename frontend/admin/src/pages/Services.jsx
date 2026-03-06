@@ -20,7 +20,10 @@ function Services() {
     }
   };
 
-  useEffect(() => { fetchServices(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchServices();
+  }, []);
 
   const handleChange = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); };
   const handleImageChange = (e) => { setImageFile(e.target.files[0]); };
@@ -43,6 +46,7 @@ function Services() {
       setImageFile(null);
       fetchServices();
     } catch (err) {
+      console.error(err);
       alert("Error adding service. Check if you are logged in.");
     }
   };

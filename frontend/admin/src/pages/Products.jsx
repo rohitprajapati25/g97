@@ -18,11 +18,14 @@ function Products() {
       });
       setProducts(res.data);
     } catch (err) {
-      console.error("Failed to fetch products");
+      console.error("Failed to fetch products", err);
     }
   };
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProducts();
+  }, []);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -58,6 +61,7 @@ function Products() {
       setPreview(null);
       fetchProducts();
     } catch (err) {
+      console.error(err);
       alert("Error adding product. Please check login status.");
     }
   };
@@ -72,6 +76,7 @@ function Products() {
       });
       setProducts(products.filter(p => p._id !== id));
     } catch (err) {
+      console.error(err);
       alert("Delete failed. Token might be expired.");
     }
   };

@@ -1,10 +1,17 @@
-import { createContext, useState, useContext } from "react";
-import Loader from "../components/Loader"; // Woh Loader jo maine pehle diya tha
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useContext, useEffect } from "react";
+import Loader from "../components/Loader"; // loader overlay component
+import { attachLoader } from "../api/axios";
 
 const LoadingContext = createContext();
 
 export const LoadingProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
+
+  // hook up axios interceptors once
+  useEffect(() => {
+    attachLoader(setLoading);
+  }, [setLoading]);
 
   return (
     <LoadingContext.Provider value={{ setLoading }}>

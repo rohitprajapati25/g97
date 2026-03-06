@@ -12,8 +12,8 @@ function UserBookings() {
     try {
       const res = await api.get("/bookings/my");
       setBookings(res.data);
-    } catch (error) {
-      console.error("Failed to fetch bookings");
+    } catch (err) {
+      console.error("Failed to fetch bookings", err);
     } finally {
       setLoading(false);
     }

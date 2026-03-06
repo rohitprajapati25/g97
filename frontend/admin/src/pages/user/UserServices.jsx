@@ -63,6 +63,7 @@ function UserServices() {
       }, 2000);
     } catch (err) {
       alert("Booking failed");
+      console.error(err);
     }
   };
 

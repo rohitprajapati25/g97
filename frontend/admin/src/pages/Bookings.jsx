@@ -22,6 +22,7 @@ function Bookings() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBookings();
   }, []);
 
@@ -34,6 +35,7 @@ function Bookings() {
       setSelectedBooking(null); 
       fetchBookings();
     } catch (err) {
+      console.error(err);
       alert("Status update failed. Please check your connection.");
     }
   };
