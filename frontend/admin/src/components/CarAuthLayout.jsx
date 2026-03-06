@@ -1,5 +1,5 @@
 import React from "react";
-import logo from "../assets/T-Logo.png"; // 🔥 LOGO PATH
+import logo from "../assets/logo.png"; // 🔥 LOGO PATH (use main navbar logo)
 
 
 const CarAuthLayout = ({ children }) => {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { Eye, EyeOff, Lock, Mail, ShieldCheck, Loader2 } from "lucide-react";
-import logo from "../assets/T-Logo.png"; 
+import logo from "../assets/logo.png"; // switched to main navbar logo
 
 function Login() {
   const navigate = useNavigate();
