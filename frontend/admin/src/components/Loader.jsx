@@ -21,10 +21,10 @@ const Loader = () => {
       {/* Loading Text */}
       <div className="mt-8 text-center">
         <h2 className="text-xl font-black uppercase italic tracking-tighter text-white">
-          G97 <span className="text-red-600">AUTO</span>
+          AutoHub <span className="text-red-600">Detailing</span>
         </h2>
         <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.4em] text-slate-500 animate-pulse">
-          Syncing System Data...
+          Syncing Application Data...
         </p>
       </div>
     </div>
