@@ -16,9 +16,11 @@ function Products() {
       const res = await api.get("/products", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setProducts(res.data);
+      // API returns { total, page, limit, products }
+      setProducts(res.data.products || []);
     } catch (err) {
       console.error("Failed to fetch products", err);
+      setProducts([]);
     }
   };
 

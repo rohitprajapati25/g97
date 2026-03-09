@@ -1,26 +1,31 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Services from "./pages/Services";
-import Products from "./pages/Products";
-import Bookings from "./pages/Bookings";
+import React, { Suspense } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./components/AdminLayout";
-import Home from "./pages/user/Home";
-import Ulogin from "./pages/user/Ulogin";
 import UserProtectedRoute from "./components/UserProtectedRoute";
-import Register from "./pages/user/Register";
-import UserServices from "./pages/user/UserServices";
-import UserStore from "./pages/user/UserStore";
-import UserDashboard from "./pages/user/UserDashboard";
-import UserBookings from "./pages/user/UserBookings";
 import { LoadingProvider } from "./context/LoadingContext";
+import Loader from "./components/Loader";
+
+// lazy-loaded pages to reduce bundle size
+const Login = React.lazy(() => import("./pages/Login"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const Services = React.lazy(() => import("./pages/Services"));
+const Products = React.lazy(() => import("./pages/Products"));
+const Bookings = React.lazy(() => import("./pages/Bookings"));
+const Home = React.lazy(() => import("./pages/user/Home"));
+const Ulogin = React.lazy(() => import("./pages/user/Ulogin"));
+const Register = React.lazy(() => import("./pages/user/Register"));
+const UserServices = React.lazy(() => import("./pages/user/UserServices"));
+const UserStore = React.lazy(() => import("./pages/user/UserStore"));
+const UserDashboard = React.lazy(() => import("./pages/user/UserDashboard"));
+const UserBookings = React.lazy(() => import("./pages/user/UserBookings"));
 
 function App() {
   return (
     <LoadingProvider>
-        <BrowserRouter>
-        <Routes>
+      <BrowserRouter>
+        <Suspense fallback={<Loader />}>
+          <Routes>
           {/* PUBLIC PAGES */}
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<UserServices />} />
@@ -49,6 +54,7 @@ function App() {
             <Route path="/user/bookings" element={<UserBookings />} />
           </Route>
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </LoadingProvider>
   );

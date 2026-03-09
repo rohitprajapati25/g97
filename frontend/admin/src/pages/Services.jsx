@@ -14,9 +14,11 @@ function Services() {
       const res = await api.get("/services", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setServices(res.data);
+      // API returns { total, page, limit, services }
+      setServices(res.data.services || []);
     } catch (err) {
       console.error("Fetch error:", err);
+      setServices([]);
     }
   };
 

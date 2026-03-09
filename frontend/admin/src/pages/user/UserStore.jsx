@@ -10,9 +10,11 @@ function UserStore() {
     const fetchProducts = async () => {
       try {
         const res = await api.get("/products");
-        setProducts(res.data);
+        // API returns { total, page, limit, products }
+        setProducts(res.data.products || res.data || []);
       } catch (err) {
         console.error(err);
+        setProducts([]);
       } finally {
         setLoading(false);
       }

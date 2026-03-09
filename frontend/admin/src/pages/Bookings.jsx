@@ -15,9 +15,11 @@ function Bookings() {
       const res = await api.get("/bookings", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setBookings(res.data);
+      // API returns { total, page, limit, bookings }
+      setBookings(res.data.bookings || []);
     } catch (err) {
       console.error("Error fetching bookings", err);
+      setBookings([]);
     }
   };
 

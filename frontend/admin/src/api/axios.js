@@ -32,23 +32,25 @@
 import axios from "axios";
 
 const api = axios.create({
-  //  baseURL = `import.meta.env.VITE_API_BASE_URL`,
-
-  // baseURL: "http://localhost:5000/api",
   baseURL: 'https://g97.onrender.com/api',
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 15000, // 15 second timeout to prevent hanging requests
 });
 
-// Ye function hum App.jsx mein call karenge loader set karne ke liye
+// Request counter to track pending requests
+let pendingRequests = 0;
+
 export const attachLoader = (setLoading) => {
-  
-  // 1. Request Interceptor (Chalu karne ke liye)
+  // 1. Request Interceptor
   api.interceptors.request.use(
     (config) => {
-      // Loader ON karein
-      if (setLoading) setLoading(true);
+      pendingRequests++;
+      // Only show loader when there are actual pending requests
+      if (pendingRequests === 1 && setLoading) {
+        setLoading(true);
+      }
 
       const userToken = localStorage.getItem("userToken");
       const adminToken = localStorage.getItem("adminToken");
@@ -60,21 +62,22 @@ export const attachLoader = (setLoading) => {
       return config;
     },
     (error) => {
-      if (setLoading) setLoading(false);
+      pendingRequests = Math.max(0, pendingRequests - 1);
+      if (pendingRequests === 0 && setLoading) setLoading(false);
       return Promise.reject(error);
     }
   );
 
-  // 2. Response Interceptor (Band karne ke liye)
+  // 2. Response Interceptor
   api.interceptors.response.use(
     (response) => {
-      // Request successful, Loader OFF karein
-      if (setLoading) setLoading(false);
+      pendingRequests = Math.max(0, pendingRequests - 1);
+      if (pendingRequests === 0 && setLoading) setLoading(false);
       return response;
     },
     (error) => {
-      // Request failed, Loader OFF karein tab bhi
-      if (setLoading) setLoading(false);
+      pendingRequests = Math.max(0, pendingRequests - 1);
+      if (pendingRequests === 0 && setLoading) setLoading(false);
       return Promise.reject(error);
     }
   );

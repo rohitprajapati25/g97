@@ -22,9 +22,11 @@ function UserServices() {
     const fetchServices = async () => {
       try {
         const res = await api.get("/services");
-        setServices(res.data);
+        // API returns { total, page, limit, services }
+        setServices(res.data.services || res.data || []);
       } catch (err) {
         console.error(err);
+        setServices([]);
       } finally {
         setLoading(false);
       }

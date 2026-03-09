@@ -20,4 +20,8 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// name lookup index
+productSchema.index({ name: 1 });
+productSchema.index({ isActive: 1 });
+
 module.exports = mongoose.model("Product", productSchema);

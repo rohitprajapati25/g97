@@ -32,4 +32,7 @@ const serviceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+serviceSchema.index({ title: 1 });
+serviceSchema.index({ isActive: 1 });
+
 module.exports = mongoose.model("Service", serviceSchema);

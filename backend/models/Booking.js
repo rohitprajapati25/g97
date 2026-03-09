@@ -41,4 +41,9 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// compound unique index to prevent duplicate slots for same user
+bookingSchema.index({ user: 1, date: 1, time: 1 }, { unique: true });
+// index on date/time for efficient sorting/filtering
+bookingSchema.index({ date: 1, time: 1 });
+
 module.exports = mongoose.model("Booking", bookingSchema);

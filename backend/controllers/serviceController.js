@@ -33,10 +33,33 @@ exports.createService = async (req, res) => {
 };
 
 // 📥 GET SERVICES
+const cache = require("../utils/cache");
+
 exports.getServices = async (req, res) => {
   try {
-    const services = await Service.find({ isActive: true });
-    res.json(services);
+    const key = "services";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    // cache full list to avoid repeated DB hits
+    const cached = cache.get(key + `:${page}:${limit}`);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const [total, services] = await Promise.all([
+      Service.countDocuments({ isActive: true }),
+      Service.find({ isActive: true })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const result = { total, page, limit, services };
+    cache.set(key + `:${page}:${limit}`, result, 30); // short TTL
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

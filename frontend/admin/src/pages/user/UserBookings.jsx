@@ -1,19 +1,22 @@
+
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import Navbar from "../../components/Navbar";
-import { X, Calendar, Clock, Car, MapPin, CheckCircle2, AlertCircle, Timer } from "lucide-react";
+import { X, Calendar, Clock, Car, CheckCircle2, AlertCircle, Timer } from "lucide-react";
 
 function UserBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBooking, setSelectedBooking] = useState(null); // Modal ke liye state
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   const fetchMyBookings = async () => {
     try {
       const res = await api.get("/bookings/my");
-      setBookings(res.data);
+      // API returns { total, page, limit, bookings }
+      setBookings(res.data.bookings || res.data || []);
     } catch (err) {
       console.error("Failed to fetch bookings", err);
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -199,3 +202,4 @@ const StatusBadge = ({ status }) => {
 };
 
 export default UserBookings;
+

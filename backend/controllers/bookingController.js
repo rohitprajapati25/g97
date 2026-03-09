@@ -51,8 +51,20 @@ exports.createBooking = async (req, res) => {
 // 📥 Get My Bookings (User)
 exports.getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user.id }).sort({ createdAt: -1 });
-    res.json(bookings);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const [total, bookings] = await Promise.all([
+      Booking.countDocuments({ user: req.user.id }),
+      Booking.find({ user: req.user.id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    res.json({ total, page, limit, bookings });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -61,8 +73,21 @@ exports.getUserBookings = async (req, res) => {
 // 📥 Get All Bookings (Admin)
 exports.getBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find().populate("user", "name email").sort({ createdAt: -1 });
-    res.json(bookings);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [total, bookings] = await Promise.all([
+      Booking.countDocuments(),
+      Booking.find()
+        .populate("user", "name email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    res.json({ total, page, limit, bookings });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

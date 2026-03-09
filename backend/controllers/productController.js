@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const cloudinary = require("../utils/cloudinary");
+const cache = require("../utils/cache");
 
 /* ===============================
    ➕ CREATE PRODUCT (ADMIN)
@@ -48,8 +49,29 @@ exports.createProduct = async (req, res) => {
 ================================ */
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    res.json(products);
+    // implement simple pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const key = `products:${page}:${limit}`;
+    const cached = cache.get(key);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const [total, products] = await Promise.all([
+      Product.countDocuments(),
+      Product.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const result = { total, page, limit, products };
+    cache.set(key, result, 30);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ message: "Fetch failed" });
   }

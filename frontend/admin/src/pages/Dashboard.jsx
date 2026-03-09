@@ -5,25 +5,42 @@ import { Package, Layers, CalendarCheck, TrendingUp } from "lucide-react";
 export default function Dashboard() {
   const [data, setData] = useState({ services: 0, products: 0, bookings: 0 });
   const [loading, setLoading] = useState(true);
+  const [admin, setAdmin] = useState(null);
+  const [qrUrl, setQrUrl] = useState("");
+  const [code, setCode] = useState("");
+  const [setupStep, setSetupStep] = useState("");
+  const [setupError, setSetupError] = useState("");
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchData = async () => {
+      const token = localStorage.getItem("adminToken");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        // Token check: Agar token nahi hai to request header mein nahi jayega
-        const token = localStorage.getItem("adminToken");
-        const res = await api.get("/dashboard", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setData(res.data);
+        // Fetch dashboard data and profile in parallel
+        const [dashboardRes, profileRes] = await Promise.all([
+          api.get("/dashboard", {
+            headers: { Authorization: `Bearer ${token}` }
+         
+          }),
+          api.get("/admin/me", {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+        
+        setData(dashboardRes.data);
+        setAdmin(profileRes.data);
       } catch (err) {
         console.error("Dashboard Error:", err);
-        // Alert ki jagah hum console pe error dekh rahe hain taaki screen block na ho
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardData();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -37,6 +54,36 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const token = localStorage.getItem("adminToken");
+
+  const handleGenerate = async () => {
+    setSetupError("");
+    try {
+      const res = await api.get("/admin/2fa/setup", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setQrUrl(res.data.otpauthUrl);
+      setSetupStep("verify");
+    } catch {
+      setSetupError("Unable to generate 2FA secret");
+    }
+  };
+
+  const handleVerify = async () => {
+    setSetupError("");
+    try {
+      await api.post("/admin/2fa/verify", { token: code }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSetupStep("");
+      // refresh profile
+      const res = await api.get("/admin/me", { headers: { Authorization: `Bearer ${token}` } });
+      setAdmin(res.data);
+    } catch (err) {
+      setSetupError(err.response?.data?.message || "Verification failed");
+    }
+  };
 
   return (
     <div className="p-8 bg-darkbg min-h-screen text-white">
@@ -89,6 +136,58 @@ export default function Dashboard() {
             iconColor="text-red-600"
           />
 
+        </div>
+
+        {/* 2FA SECTION */}
+        <div className="mt-8 p-6 rounded-2xl bg-zinc-900/40 border border-white/5">
+          {admin && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm">Two‑factor authentication:</p>
+              <p className="font-bold">
+                {admin.twoFactorEnabled ? "Enabled" : "Disabled"}
+              </p>
+            </div>
+          )}
+          {!admin?.twoFactorEnabled && setupStep !== "verify" && (
+            <button
+              className="mt-4 px-4 py-2 bg-red-600 rounded-lg text-xs uppercase font-black tracking-wide hover:bg-red-700"
+              onClick={handleGenerate}
+            >
+              Enable 2FA
+            </button>
+          )}
+          {setupError && (
+            <p className="mt-2 text-red-400 text-xs">{setupError}</p>
+          )}
+
+          {setupStep === "verify" && (
+            <div className="mt-4">
+              <p className="text-xs mb-2">Scan QR code with an authenticator app</p>
+              {qrUrl && (
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
+                    qrUrl
+                  )}&size=150x150`}
+                  alt="2FA QR"
+                />
+              )}
+              <div className="mt-3">
+                <input
+                  type="text"
+                  placeholder="Enter code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="bg-zinc-800 text-white p-2 rounded"
+                />
+                <button
+                  onClick={handleVerify}
+                  className="ml-2 px-3 py-2 bg-green-600 rounded text-xs uppercase font-black"
+                >
+                  Verify
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RECENT ACTIVITY PLACEHOLDER */}
