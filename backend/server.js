@@ -10,14 +10,22 @@ const adminRoutes = require("./routes/adminRoutes");
 
 
 
-
 const connectDB = require("./config/db");
 
 const app = express();
+
+// CORS configuration - allow all origins for production
+const corsOptions = {
+  origin: ["http://localhost:5173", "http://localhost:3000", "https://g97.vercel.app", "https://g97.onrender.com"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
 app.use(helmet()); // set security headers
 // compress responses to reduce payload size
 app.use(compression());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // simple request logging in dev

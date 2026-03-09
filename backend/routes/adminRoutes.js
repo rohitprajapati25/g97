@@ -3,7 +3,7 @@ const router = express.Router();
 const { registerAdmin, loginAdmin, generate2FA, verify2FA, getProfile } = require("../controllers/adminController");
 const { protectAdmin } = require("../middleware/authMiddleware");
 
-router.post("/register", protectAdmin, registerAdmin);
+router.post("/register", registerAdmin);
 router.post("/login", loginAdmin);
 
 // two factor endpoints (must be logged in already)

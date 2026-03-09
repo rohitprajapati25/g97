@@ -8,10 +8,14 @@ import logo from "../assets/logo.png"; // 🔥 LOGO PATH (use main navbar logo)
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
+  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
   const handlePasswordSubmit = async (e) => {
@@ -52,6 +56,31 @@ const Login = () => {
     navigate("/dashboard");
   };
 
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    try {
+      await api.post("/admin/register", { name, email, password, phone });
+      setSuccess("Registration successful! Please login.");
+      setIsRegister(false);
+      setName("");
+      setPhone("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleRegister = () => {
+    setIsRegister(!isRegister);
+    setError("");
+    setSuccess("");
+    setOtpSent(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-6 relative overflow-hidden">
       {/* Decorative Background Elements */}
@@ -87,7 +116,97 @@ const Login = () => {
             </div>
           )}
 
-          {!otpSent ? (
+          {success && (
+            <div className="mb-6 p-3 bg-green-500/10 border-l-4 border-green-500 text-green-400 text-sm">
+              {success}
+            </div>
+          )}
+
+          {isRegister ? (
+            <form onSubmit={handleRegister} className="space-y-5">
+              <div className="group">
+                <label className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2 block group-focus-within:text-red-500 transition-colors">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-4 pr-4 text-white focus:ring-2 focus:ring-red-500/50 focus:border-red-500 outline-none transition-all placeholder:text-gray-700"
+                    placeholder="Admin Name"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="group">
+                <label className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2 block group-focus-within:text-red-500 transition-colors">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-4 pr-4 text-white focus:ring-2 focus:ring-red-500/50 focus:border-red-500 outline-none transition-all placeholder:text-gray-700"
+                    placeholder="9104318605"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="group">
+                <label className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2 block group-focus-within:text-red-500 transition-colors">
+                  Administrator Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-red-500 transition-colors" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-red-500/50 focus:border-red-500 outline-none transition-all placeholder:text-gray-700"
+                    placeholder="admin@autohub.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="group">
+                <label className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2 block group-focus-within:text-red-500 transition-colors">
+                  Secure Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-red-500 transition-colors" />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-red-500/50 focus:border-red-500 outline-none transition-all placeholder:text-gray-700"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-red-600 hover:bg-red-500 disabled:bg-gray-800 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-900/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+              >
+                {loading ? "Registering..." : ("Register Admin")}
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleRegister}
+                className="w-full text-gray-500 hover:text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                Already have an account? Login
+              </button>
+            </form>
+          ) : !otpSent ? (
             <form onSubmit={handlePasswordSubmit} className="space-y-5">
               <div className="group">
                 <label className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2 block group-focus-within:text-red-500 transition-colors">
@@ -171,6 +290,16 @@ const Login = () => {
             </form>
           )}
         </div>
+        
+        {!isRegister && !otpSent && (
+          <button
+            type="button"
+            onClick={toggleRegister}
+            className="w-full mt-4 text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            New admin? Register here
+          </button>
+        )}
         
         <p className="text-center text-gray-600 text-[10px] mt-8 uppercase tracking-[0.2em]">
           Internal System &bull; Authorized Personnel Only &bull; 2026

@@ -25,14 +25,14 @@
 //   }
 // );
 
-// export default api;
-
-
-
 import axios from "axios";
 
+// Detect environment - use local for development, live for production
+const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const BASE_URL = isLocal ? "http://localhost:5000/api" : "https://g97.onrender.com/api";
+
 const api = axios.create({
-  baseURL: 'https://g97.onrender.com/api',
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },

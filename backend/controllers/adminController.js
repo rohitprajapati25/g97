@@ -122,11 +122,22 @@ exports.loginAdmin = async (req, res) => {
   try {
     const { email, password, otp } = req.body;
 
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
     const admin = await Admin.findOne({ email });
-    if (!admin) return res.status(400).json({ message: "Admin not found" });
+    if (!admin) {
+      console.log(`Admin login attempt with non-existent email: ${email}`);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) return res.status(400).json({ message: "Wrong password" });
+    if (!isMatch) {
+      console.log(`Admin login attempt with wrong password for: ${email}`);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     // Always require OTP - if not provided, generate and send one
     if (!otp) {
