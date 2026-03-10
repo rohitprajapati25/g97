@@ -127,9 +127,10 @@ async function sendOtp(admin) {
 
 }
 
+// Login Admin - Simplified (no OTP required)
 exports.loginAdmin = async (req, res) => {
   try {
-    const { email, password, otp } = req.body;
+    const { email, password } = req.body;
 
     // Validate input
     if (!email || !password) {
@@ -148,28 +149,13 @@ exports.loginAdmin = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Always require OTP - if not provided, generate and send one
-    if (!otp) {
-      await sendOtp(admin);
-      return res.status(200).json({ 
-        message: "OTP sent to your email",
-        otpRequired: true 
-      });
+    // Check if JWT_SECRET is configured
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is not defined in environment variables");
+      return res.status(500).json({ message: "Server configuration error. Please contact admin." });
     }
 
-    // verify OTP
-    if (!admin.otpCode || admin.otpExpires < Date.now()) {
-      return res.status(400).json({ message: "OTP expired. Please request a new one." });
-    }
-    if (otp !== admin.otpCode) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // clear OTP after successful verification
-    admin.otpCode = undefined;
-    admin.otpExpires = undefined;
-    await admin.save();
-
+    // Generate token directly without OTP
     const token = jwt.sign(
       { id: admin._id, role: "admin" },
       process.env.JWT_SECRET,
@@ -178,7 +164,7 @@ exports.loginAdmin = async (req, res) => {
 
     res.json({ token, admin: { id: admin._id, email: admin.email } });
   } catch (err) {
-    console.error(err);
+    console.error("Admin login error:", err);
     res.status(500).json({ message: "Login failed" });
   }
 };

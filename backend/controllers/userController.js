@@ -35,6 +35,12 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Check if JWT_SECRET is configured
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is not defined in environment variables");
+      return res.status(500).json({ message: "Server configuration error. Please contact admin." });
+    }
+
     const user = await User.findOne({ email });
     if (!user)
       return res.status(400).json({ message: "Invalid credentials" });
@@ -61,6 +67,7 @@ exports.loginUser = async (req, res) => {
       }
     });
   } catch (err) {
+    console.error("User login error:", err);
     res.status(500).json({ message: "Login failed" });
   }
 };
