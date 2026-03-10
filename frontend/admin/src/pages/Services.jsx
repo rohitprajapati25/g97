@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import { Plus, Trash2, Wrench, Clock, IndianRupee, Sparkles } from "lucide-react";
+import { Plus, Trash2, Edit3, X, Clock, Sparkles } from "lucide-react";
 
-// Dynamic BASE_URL based on environment
 const getBaseUrl = () => {
   const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   return isLocal ? "http://localhost:5000" : "https://g97.rerender";
@@ -12,6 +11,7 @@ function Services() {
   const [services, setServices] = useState([]);
   const [form, setForm] = useState({ title: "", description: "", price: "", duration: "" });
   const [imageFile, setImageFile] = useState(null);
+  const [editingId, setEditingId] = useState(null); // Edit tracking state
   const BASE_URL = getBaseUrl();
 
   const fetchServices = async () => {
@@ -20,91 +20,114 @@ function Services() {
       const res = await api.get("/services", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // API returns { total, page, limit, services }
       setServices(res.data.services || []);
     } catch (err) {
       console.error("Fetch error:", err);
-      setServices([]);
     }
   };
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchServices();
-  }, []);
+  useEffect(() => { fetchServices(); }, []);
 
   const handleChange = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); };
   const handleImageChange = (e) => { setImageFile(e.target.files[0]); };
 
-  const addService = async (e) => {
+  // EDIT MODE START
+  const startEdit = (service) => {
+    setEditingId(service._id);
+    setForm({
+      title: service.title,
+      description: service.description,
+      price: service.price,
+      duration: service.duration
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm({ title: "", description: "", price: "", duration: "" });
+    setImageFile(null);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("adminToken");
     const formData = new FormData();
     Object.keys(form).forEach(key => formData.append(key, form[key]));
-    formData.append("image", imageFile);
+    if (imageFile) formData.append("image", imageFile);
 
     try {
-      await api.post("/services", formData, {
-        headers: { 
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`
-        },
-      });
-      setForm({ title: "", description: "", price: "", duration: "" });
-      setImageFile(null);
+      if (editingId) {
+        // UPDATE EXISTING SERVICE
+        await api.put(`/services/${editingId}`, formData, {
+          headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+        });
+        alert("Service updated successfully!");
+      } else {
+        // CREATE NEW SERVICE
+        await api.post("/services", formData, {
+          headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+        });
+        alert("Service added successfully!");
+      }
+      cancelEdit();
       fetchServices();
     } catch (err) {
       console.error(err);
-      alert("Error adding service. Check if you are logged in.");
+      alert("Action failed. Please try again.");
     }
   };
 
-  // 🔥 FIXED DELETE FUNCTION
   const deleteService = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this service?")) return;
-    
+    if (!window.confirm("Are you sure?")) return;
     try {
       const token = localStorage.getItem("adminToken");
-      // Header bhejna zaroori hai warna server 401 Unauthorized dega
       await api.delete(`/services/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      // State se turant hatane ke liye (Faster UI)
-      setServices(services.filter(service => service._id !== id));
-      alert("Service deleted successfully");
+      setServices(services.filter(s => s._id !== id));
     } catch (err) {
-      console.error("Delete Error:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Delete failed: Server error or Unauthorized");
+      console.error(err);
     }
   };
 
   return (
-    <div className="p-8 bg-darkbg min-h-screen text-white font-sans">
+    <div className="p-8 bg-zinc-950 min-h-screen text-white font-sans">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}
         <div className="mb-12">
           <div className="flex items-center gap-2 mb-2 text-red-600">
             <Sparkles size={16} className="animate-pulse" />
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">Studio Management</p>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">
+               {editingId ? "Updating Service" : "Studio Management"}
+            </p>
           </div>
           <h1 className="text-5xl font-black uppercase italic tracking-tighter">
-            Service <span className="text-red-600">Menu</span>
+            {editingId ? "Edit" : "Service"} <span className="text-red-600">{editingId ? "Details" : "Menu"}</span>
           </h1>
         </div>
 
-        {/* ADD SERVICE FORM (Sleek Design) */}
+        {/* DYNAMIC FORM */}
         <div className="bg-zinc-900/40 p-8 rounded-[2.5rem] border border-white/5 mb-12 backdrop-blur-xl">
-          <form onSubmit={addService} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <input name="title" value={form.title} onChange={handleChange} placeholder="Service Title" className="bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600/50 transition-all font-bold" required />
-            <input name="duration" value={form.duration} onChange={handleChange} placeholder="Duration (e.g. 2 hrs)" className="bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600/50 transition-all font-bold" required />
-            <input name="price" type="number" value={form.price} onChange={handleChange} placeholder="Price (₹)" className="bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600/50 transition-all font-bold" required />
-            <input type="file" onChange={handleImageChange} className="text-[10px] text-zinc-500 file:bg-red-600 file:text-white file:border-0 file:px-4 file:py-2 file:rounded-full cursor-pointer" required />
-            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Service Description..." className="lg:col-span-4 bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600/50 h-24 font-medium" required />
-            <button className="lg:col-span-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs py-5 rounded-2xl transition-all shadow-lg shadow-red-600/20">
-              Publish New Service
-            </button>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <input name="title" value={form.title} onChange={handleChange} placeholder="Service Title" className="bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600/50 font-bold" required />
+            <input name="duration" value={form.duration} onChange={handleChange} placeholder="Duration (e.g. 2 hrs)" className="bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600/50 font-bold" required />
+            <input name="price" type="number" value={form.price} onChange={handleChange} placeholder="Price (₹)" className="bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600/50 font-bold" required />
+            <input type="file" onChange={handleImageChange} className="text-[10px] text-zinc-500 file:bg-red-600 file:text-white file:border-0 file:px-4 file:py-2 file:rounded-full cursor-pointer" />
+            
+            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Description..." className="lg:col-span-4 bg-zinc-950 border border-white/10 p-4 rounded-2xl outline-none h-24 font-medium" required />
+            
+            <div className="lg:col-span-4 flex gap-4">
+              <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs py-5 rounded-2xl transition-all shadow-lg shadow-red-600/20">
+                {editingId ? "Update Changes" : "Publish New Service"}
+              </button>
+              {editingId && (
+                <button type="button" onClick={cancelEdit} className="bg-zinc-800 hover:bg-zinc-700 px-8 rounded-2xl transition-all">
+                  <X size={20} />
+                </button>
+              )}
+            </div>
           </form>
         </div>
 
@@ -114,9 +137,14 @@ function Services() {
             <div key={s._id} className="group bg-zinc-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden hover:border-red-600/30 transition-all duration-500">
               <div className="relative h-48">
                 <img src={s.image?.startsWith('http') ? s.image : `${BASE_URL}/${s.image}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={s.title} />
-                <button onClick={() => deleteService(s._id)} className="absolute top-4 right-4 p-3 bg-black/60 backdrop-blur-md text-red-500 hover:bg-red-600 hover:text-white rounded-2xl transition-all">
-                  <Trash2 size={18} />
-                </button>
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button onClick={() => startEdit(s)} className="p-3 bg-white/10 backdrop-blur-md text-white hover:bg-white/20 rounded-xl transition-all">
+                    <Edit3 size={18} />
+                  </button>
+                  <button onClick={() => deleteService(s._id)} className="p-3 bg-black/60 backdrop-blur-md text-red-500 hover:bg-red-600 hover:text-white rounded-xl transition-all">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-black uppercase italic text-white mb-2">{s.title}</h3>

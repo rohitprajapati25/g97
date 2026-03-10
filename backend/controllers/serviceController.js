@@ -99,3 +99,29 @@ exports.deleteService = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// updateService example snippet
+exports.updateService = async (req, res) => {
+  try {
+    const { title, description, price, duration } = req.body;
+    let updateData = { title, description, price, duration };
+
+    // Check if a new image was uploaded
+    if (req.file) {
+      // Yaha aap Cloudinary upload logic likhenge
+      // const result = await cloudinary.uploader.upload(req.file.path);
+      // updateData.image = result.secure_url;
+      // updateData.imagePublicId = result.public_id;
+    }
+
+    const updatedService = await Service.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
+
+    res.status(200).json({ success: true, service: updatedService });
+  } catch (error) {
+    res.status(500).json({ message: "Update failed", error: error.message });
+  }
+};

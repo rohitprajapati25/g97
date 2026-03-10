@@ -94,3 +94,54 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ message: "Delete failed" });
   }
 };
+
+/* ===============================
+    🔄 UPDATE PRODUCT (ADMIN)
+================================ */
+exports.updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, description } = req.body;
+
+    // 1. Check if product exists
+    let product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // 2. Prepare Update Object
+    const updateData = {
+      name: name ? name.trim() : product.name,
+      price: price ? Number(price) : product.price,
+      description: description !== undefined ? description : product.description,
+    };
+
+    // 3. Handle Image Update (If new file is provided)
+    if (req.file && req.file.buffer) {
+      // Naya image upload logic (Base64)
+      const uploadRes = await cloudinary.uploader.upload(
+        `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+        {
+          folder: "products",
+        }
+      );
+      updateData.image = uploadRes.secure_url;
+    }
+
+    // 4. Update Database
+    product = await Product.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    // 5. Clear Cache (Taki updated data turant dikhe)
+    // cache.flushAll(); // Agar aapka cache utility support karta hai toh sab uda do
+    // Ya specific key clear karein
+
+    res.status(200).json(product);
+  } catch (err) {
+    console.error("UPDATE PRODUCT ERROR ❌", err);
+    res.status(500).json({ message: "Update failed" });
+  }
+};

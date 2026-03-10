@@ -10,13 +10,15 @@ const {
   deleteService,
 } = require("../controllers/serviceController");
 
-// 📥 Get Services (Public)
+// Public route
 router.get("/", getServices);
 
-// ADMIN ONLY ROUTES
+// Admin routes
 router.post("/", protectAdmin, upload.single("image"), createService);
-router.put("/:id", protectAdmin, updateService);
+
+// Edit mein bhi image upload handle karna hai
+router.put("/:id", protectAdmin, upload.single("image"), updateService);
+
 router.delete("/:id", protectAdmin, deleteService);
 
 module.exports = router;
-
