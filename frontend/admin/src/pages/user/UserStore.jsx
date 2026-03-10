@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import api from "../../api/axios";
-import Footer from "../../components/Footer"
+import Footer from "../../components/Footer";
+import { 
+  ShoppingCart, Trash2, MessageCircle, Lock, 
+  Plus, Minus, X, ShoppingBag, Zap 
+} from "lucide-react";
 
 function UserStore() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState([]);
+  const [showCart, setShowCart] = useState(false);
+  const navigate = useNavigate();
+
+  // --- CONFIGURATION ---
+  const WHATSAPP_NUMBER = "919016710369"; // Apna WhatsApp Number yahan dalein
+  const token = localStorage.getItem("userToken");
+  const userData = JSON.parse(localStorage.getItem("userData") || "{}");
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const res = await api.get("/products");
-        // API returns { total, page, limit, products }
         setProducts(res.data.products || res.data || []);
       } catch (err) {
-        console.error(err);
+        console.error("Fetch Error:", err);
         setProducts([]);
       } finally {
         setLoading(false);
@@ -23,100 +35,212 @@ function UserStore() {
     fetchProducts();
   }, []);
 
+  // --- CART LOGIC ---
+  const addToCart = (product) => {
+    const exists = cart.find((item) => item._id === product._id);
+    if (exists) {
+      setCart(cart.map((item) => 
+        item._id === product._id ? { ...item, qty: item.qty + 1 } : item
+      ));
+    } else {
+      setCart([...cart, { ...product, qty: 1 }]);
+    }
+    setShowCart(true);
+  };
+
+  const updateQty = (id, delta) => {
+    setCart(cart.map(item => {
+      if (item._id === id) {
+        const newQty = item.qty + delta;
+        return newQty > 0 ? { ...item, qty: newQty } : item;
+      }
+      return item;
+    }));
+  };
+
+  const removeFromCart = (id) => {
+    setCart(cart.filter((item) => item._id !== id));
+  };
+
+  const totalAmount = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+  // --- CHECKOUT VIA WHATSAPP ---
+  const handleCheckout = () => {
+    if (!token) {
+      alert("Please login to place your order!");
+      navigate("/login");
+      return;
+    }
+
+    if (cart.length === 0) return alert("Your cart is empty!");
+
+    // Formatting Message
+    let message = `*🔥 NEW ORDER: AUTO HUB STORE*\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `👤 *Customer:* ${userData.name || "User"}\n`;
+    message += `📞 *Phone:* ${userData.phone || "Not Provided"}\n`;
+    message += `📧 *Email:* ${userData.email || "N/A"}\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    cart.forEach((item, index) => {
+      message += `*${index + 1}. ${item.name.toUpperCase()}*\n`;
+      message += `   Qty: ${item.qty} | Price: ₹${item.price * item.qty}\n\n`;
+    });
+
+    message += `━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `*TOTAL PAYABLE: ₹${totalAmount}*\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    message += `Please confirm my order and send payment details.`;
+
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, "_blank");
+  };
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#fafafa] relative font-sans text-slate-900">
       <Navbar />
 
-      {/* --- PREMIUM STORE HEADER --- */}
-      <section className="bg-slate-900 pt-32 pb-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <span className="text-red-500 font-bold tracking-[0.2em] uppercase text-xs mb-4 block">
-            G97 Gear
+      {/* --- FLOATING CART ICON --- */}
+      <button 
+        onClick={() => setShowCart(true)}
+        className="fixed bottom-8 right-8 z-50 bg-red-600 text-white p-5 rounded-full shadow-[0_15px_30px_rgba(220,38,38,0.4)] hover:scale-110 active:scale-95 transition-all flex items-center gap-3 group"
+      >
+        <ShoppingCart size={24} />
+        {cart.length > 0 && (
+          <span className="absolute -top-2 -right-2 bg-slate-900 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white">
+            {cart.length}
           </span>
-          <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
+        )}
+      </button>
+
+      {/* --- CART SIDEBAR --- */}
+      {showCart && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowCart(false)} />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-8 flex flex-col animate-in slide-in-from-right duration-500">
+            
+            <div className="flex justify-between items-center mb-10 border-b border-gray-100 pb-6">
+              <div>
+                <h2 className="text-3xl font-black uppercase italic tracking-tighter">Your <span className="text-red-600">Gear</span></h2>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Review your selection</p>
+              </div>
+              <button onClick={() => setShowCart(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+              {cart.length === 0 ? (
+                <div className="text-center py-20">
+                  <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
+                  <p className="text-gray-400 font-bold italic">"Your cart is empty. Fuel it up!"</p>
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item._id} className="group flex gap-5 items-center bg-gray-50 p-4 rounded-[1.5rem] border border-transparent hover:border-red-600/10 transition-all">
+                    <div className="w-20 h-20 bg-white rounded-xl overflow-hidden border border-gray-100 shrink-0">
+                      <img src={item.image} className="w-full h-full object-contain p-2" alt={item.name} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-black text-sm uppercase italic tracking-tight mb-1">{item.name}</h4>
+                      <div className="flex items-center gap-4 mt-2">
+                         <div className="flex items-center bg-white rounded-lg border border-gray-200">
+                            <button onClick={() => updateQty(item._id, -1)} className="p-1 hover:text-red-600"><Minus size={14}/></button>
+                            <span className="px-2 font-bold text-xs">{item.qty}</span>
+                            <button onClick={() => updateQty(item._id, 1)} className="p-1 hover:text-red-600"><Plus size={14}/></button>
+                         </div>
+                         <p className="text-red-600 font-black text-sm italic">₹{item.price * item.qty}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => removeFromCart(item._id)} className="text-gray-300 hover:text-red-600 transition-colors">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="flex justify-between items-center mb-8 px-2">
+                <span className="font-black text-gray-400 uppercase text-[10px] tracking-[0.2em]">Total Estimate</span>
+                <span className="text-3xl font-black text-slate-900 italic">₹{totalAmount}</span>
+              </div>
+              
+              {!token ? (
+                <button 
+                  onClick={() => navigate("/user/login")}
+                  className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-red-600 transition-all shadow-xl"
+                >
+                  <Lock size={16} /> Login to Order
+                </button>
+              ) : (
+                <button 
+                  onClick={handleCheckout}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl shadow-green-600/20"
+                >
+                  <MessageCircle size={18} fill="currentColor" /> Send Order to WhatsApp
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- HERO SECTION --- */}
+      <section className="bg-slate-950 pt-40 pb-24 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full -mr-48 -mt-48" />
+        <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
+          <div className="flex items-center justify-center gap-2 mb-6 text-red-600 font-black uppercase tracking-[0.4em] text-[10px]">
+            <Zap size={14} fill="currentColor" />
+            <span>Authorized Gear Shop</span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter uppercase italic leading-none">
             Pro <span className="text-red-600">Car Care</span> Store
           </h1>
-          <p className="text-gray-400 max-w-xl mx-auto text-lg italic">
-            "Professional results, delivered to your doorstep."
+          <p className="text-gray-500 max-w-xl mx-auto text-xs font-bold uppercase tracking-[0.2em] leading-relaxed">
+            Professional Grade Detailing Essentials Used By The Masters.
           </p>
         </div>
       </section>
 
       {/* --- PRODUCTS GRID --- */}
-      <section className="py-20 bg-[#f8f9fa]">
+      <section className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           {loading ? (
             <div className="flex flex-col items-center py-20">
-              <div className="animate-spin h-10 w-10 border-4 border-red-600 border-t-transparent rounded-full mb-4"></div>
-              <p className="text-gray-400 font-medium">Stocking the shelves...</p>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-               <p className="text-gray-400 text-xl">New arrivals coming soon!</p>
+              <div className="animate-spin h-12 w-12 border-4 border-red-600 border-t-transparent rounded-full mb-6"></div>
+              <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Loading Inventory...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
               {products.map((p) => (
-                <div
-                  key={p._id}
-                  className={`group bg-white rounded-[2rem] overflow-hidden border border-gray-100 transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] flex flex-col ${
-                    p.stock <= 0 ? "opacity-75 grayscale-[0.5]" : ""
-                  }`}
-                >
-                  {/* Image Container */}
-                  <div className="relative h-64 bg-gray-50 overflow-hidden">
-                    <img
-                      src={p.image || "https://images.unsplash.com/photo-1552656791-61040445ec6c"}
+                <div key={p._id} className="group bg-white rounded-[2.5rem] p-5 border border-gray-100 hover:shadow-2xl transition-all duration-500 relative flex flex-col">
+                  <div className="relative h-60 bg-[#f9f9f9] rounded-[2rem] overflow-hidden mb-6 flex items-center justify-center">
+                    <img 
+                      src={p.image} 
+                      className="h-full w-full object-contain p-8 transition-transform duration-700 group-hover:scale-110" 
                       alt={p.name}
-                      className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-110"
                     />
-
-                    {/* Tags */}
-                    {p.stock <= 0 && (
-                      <div className="absolute top-4 right-4">
-                        <span className="bg-gray-900/80 backdrop-blur-md text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase">
-                          Sold Out
-                        </span>
-                      </div>
-                    )}
-                    {p.stock > 0 && p.stock < 5 && (
-                      <div className="absolute top-4 right-4">
-                        <span className="bg-orange-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase">
-                          Low Stock
-                        </span>
-                      </div>
-                    )}
                   </div>
-
-                  {/* Details */}
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-red-600 transition-colors truncate">
+                  <div className="flex-1 flex flex-col px-2">
+                    <h3 className="font-black text-slate-900 uppercase italic tracking-tight text-xl mb-2 group-hover:text-red-600 transition-colors leading-tight">
                       {p.name}
                     </h3>
-                    <p className="text-gray-500 text-xs mt-2 line-clamp-2 leading-relaxed h-8">
+                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-6 line-clamp-2 leading-relaxed">
                       {p.description}
                     </p>
-
-                    <div className="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
-                      <p className="text-2xl font-black text-slate-900">
-                        ₹{p.price}
-                      </p>
-                      {p.stock > 0 && (
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                          {p.stock} Units Left
-                        </span>
-                      )}
+                    <div className="mt-auto pt-6 border-t border-gray-50 flex items-center justify-between mb-6">
+                      <span className="text-2xl font-black text-slate-950 italic">₹{p.price}</span>
+                      <div className="flex items-center gap-1 text-[9px] font-black text-green-600 uppercase tracking-tighter">
+                         <div className="w-1.5 h-1.5 bg-green-600 rounded-full animate-pulse" />
+                         Ready to ship
+                      </div>
                     </div>
-
-                    <button
-                      disabled={p.stock <= 0}
-                      className={`w-full mt-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all duration-300 ${
-                        p.stock > 0
-                          ? "bg-slate-900 hover:bg-red-600 text-white shadow-lg shadow-slate-200 hover:shadow-red-200"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
+                    <button 
+                      onClick={() => addToCart(p)}
+                      className="w-full bg-slate-950 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 transition-all shadow-lg active:scale-95"
                     >
-                      {p.stock > 0 ? "Add to Cart" : "Out of Stock"}
+                      Add To Cart
                     </button>
                   </div>
                 </div>
@@ -126,51 +250,7 @@ function UserStore() {
         </div>
       </section>
 
-      {/* --- TRUST FEATURES --- */}
-      <section className="bg-white py-24">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-12">
-            <div className="group text-center">
-              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 group-hover:bg-red-600 group-hover:rotate-12 transition-all duration-300">
-                🏆
-              </div>
-              <h3 className="font-black text-xl text-slate-900 uppercase tracking-tight">
-                Premium Quality
-              </h3>
-              <p className="text-gray-500 text-sm mt-3 leading-relaxed">
-                We only sell what we use in our own detailing studio. Quality guaranteed.
-              </p>
-            </div>
-
-            <div className="group text-center">
-              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 group-hover:bg-red-600 group-hover:rotate-12 transition-all duration-300">
-                🚚
-              </div>
-              <h3 className="font-black text-xl text-slate-900 uppercase tracking-tight">
-                Express Shipping
-              </h3>
-              <p className="text-gray-500 text-sm mt-3 leading-relaxed">
-                Get your car care essentials delivered safely within 2-4 business days.
-              </p>
-            </div>
-
-            <div className="group text-center">
-              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 group-hover:bg-red-600 group-hover:rotate-12 transition-all duration-300">
-                🛡️
-              </div>
-              <h3 className="font-black text-xl text-slate-900 uppercase tracking-tight">
-                100% Secure
-              </h3>
-              <p className="text-gray-500 text-sm mt-3 leading-relaxed">
-                Trusted by 5000+ car enthusiasts. Genuine products from authorized brands.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* --- MODERN FOOTER --- */}
-      <Footer/>
+      <Footer />
     </div>
   );
 }
