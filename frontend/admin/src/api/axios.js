@@ -30,7 +30,7 @@ import axios from "axios";
 // Detect environment - use local for development, live for production
 // Supports: localhost, 127.0.0.1, g97.rerender, g97.onrender.com
 const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-const BASE_URL = isLocal ? "http://localhost:5000/api" : "https://g97.onrender.com/api";
+const BASE_URL = isLocal ? "http://localhost:5000/api" : "https://g97backend.onrender.com/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
