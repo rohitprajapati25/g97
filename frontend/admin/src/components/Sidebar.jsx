@@ -8,7 +8,7 @@ import {
   Settings,
   UserCircle
 } from "lucide-react";
-import logo from "../assets/logo.png"; // New Logo Import
+import logo from "../assets/logo.png";
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -95,10 +95,17 @@ function Sidebar() {
             </div>
         </div>
 
-        <button className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-zinc-500 hover:text-white transition-all text-[10px] font-bold uppercase tracking-widest group">
-           <Settings size={16} className="group-hover:rotate-45 transition-transform duration-500" />
+        <Link 
+          to="/admin/settings"
+          className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest group ${
+            isActive("/admin/settings") 
+              ? "bg-gradient-to-r from-red-600/20 to-transparent text-white" 
+              : "text-zinc-500 hover:text-white"
+          }`}
+        >
+           <Settings size={16} className={`group-hover:rotate-45 transition-transform duration-500 ${isActive("/admin/settings") ? "text-red-500" : ""}`} />
            <span>Settings</span>
-        </button>
+        </Link>
 
         <button
           onClick={handleLogout}

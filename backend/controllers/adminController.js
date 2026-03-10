@@ -46,6 +46,71 @@ exports.getProfile = async (req, res) => {
   res.json(admin);
 };
 
+// ====== update admin profile ======
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+    const adminId = req.admin.id;
+
+    const admin = await Admin.findById(adminId);
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+    // Check if email is being changed and if it's already in use
+    if (email && email !== admin.email) {
+      const emailExists = await Admin.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      admin.email = email;
+    }
+
+    if (name) admin.name = name;
+    if (phone) admin.phone = phone;
+
+    await admin.save();
+
+    res.json({
+      message: "Profile updated successfully",
+      admin: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        phone: admin.phone
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Profile update failed" });
+  }
+};
+
+// ====== change password ======
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const adminId = req.admin.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current and new password are required" });
+    }
+
+    const admin = await Admin.findById(adminId);
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, admin.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    admin.password = hashedPassword;
+    await admin.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Password change failed" });
+  }
+};
+
 // ====== two-factor helpers ======
 exports.generate2FA = async (req, res) => {
   try {

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import { Package, Layers, CalendarCheck, TrendingUp } from "lucide-react";
+import { Package, Layers, CalendarCheck, TrendingUp, Clock, Car, User, Mail, Phone } from "lucide-react";
 
 export default function Dashboard() {
-  const [data, setData] = useState({ services: 0, products: 0, bookings: 0 });
+  const [data, setData] = useState({ services: 0, products: 0, bookings: 0, recentBookings: [] });
   const [loading, setLoading] = useState(true);
   const [admin, setAdmin] = useState(null);
   const [qrUrl, setQrUrl] = useState("");
@@ -57,19 +57,7 @@ export default function Dashboard() {
 
   const token = localStorage.getItem("adminToken");
 
-  const handleGenerate = async () => {
-    setSetupError("");
-    try {
-      const res = await api.get("/admin/2fa/setup", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setQrUrl(res.data.otpauthUrl);
-      setSetupStep("verify");
-    } catch {
-      setSetupError("Unable to generate 2FA secret");
-    }
-  };
-
+ 
   const handleVerify = async () => {
     setSetupError("");
     try {
@@ -138,68 +126,65 @@ export default function Dashboard() {
 
         </div>
 
-        {/* 2FA SECTION */}
-        <div className="mt-8 p-6 rounded-2xl bg-zinc-900/40 border border-white/5">
-          {admin && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm">Two‑factor authentication:</p>
-              <p className="font-bold">
-                {admin.twoFactorEnabled ? "Enabled" : "Disabled"}
-              </p>
-            </div>
-          )}
-          {!admin?.twoFactorEnabled && setupStep !== "verify" && (
-            <button
-              className="mt-4 px-4 py-2 bg-red-600 rounded-lg text-xs uppercase font-black tracking-wide hover:bg-red-700"
-              onClick={handleGenerate}
-            >
-              Enable 2FA
-            </button>
-          )}
-          {setupError && (
-            <p className="mt-2 text-red-400 text-xs">{setupError}</p>
-          )}
-
-          {setupStep === "verify" && (
-            <div className="mt-4">
-              <p className="text-xs mb-2">Scan QR code with an authenticator app</p>
-              {qrUrl && (
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
-                    qrUrl
-                  )}&size=150x150`}
-                  alt="2FA QR"
-                />
-              )}
-              <div className="mt-3">
-                <input
-                  type="text"
-                  placeholder="Enter code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="bg-zinc-800 text-white p-2 rounded"
-                />
-                <button
-                  onClick={handleVerify}
-                  className="ml-2 px-3 py-2 bg-green-600 rounded text-xs uppercase font-black"
-                >
-                  Verify
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* RECENT ACTIVITY PLACEHOLDER */}
+        {/* RECENT ACTIVITY SECTION */}
         <div className="mt-12 p-8 rounded-[2.5rem] bg-zinc-900/30 border border-white/5 backdrop-blur-md">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-black uppercase italic tracking-tight">Recent Detailing Orders</h3>
                 <button className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition">View All Orders</button>
             </div>
-            <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+            
+            {data?.recentBookings && data.recentBookings.length > 0 ? (
+              <div className="space-y-4">
+                {data.recentBookings.map((booking) => (
+                  <div key={booking._id} className="flex items-center justify-between p-4 bg-zinc-950/50 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-red-600/10 rounded-xl">
+                        <Car size={20} className="text-red-500" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <User size={14} className="text-zinc-500" />
+                          <span className="text-white font-bold text-sm">{booking.userName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Phone size={12} className="text-zinc-600" />
+                          <span className="text-zinc-500 text-xs">{booking.phone}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="hidden md:flex items-center gap-6">
+                      <div className="text-center">
+                        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Service</p>
+                        <p className="text-white text-sm font-bold">{booking.service}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Car Type</p>
+                        <p className="text-white text-sm font-bold">{booking.carType}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Date</p>
+                        <p className="text-white text-sm font-bold">{booking.date}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Time</p>
+                        <div className="flex items-center gap-1 justify-center">
+                          <Clock size={12} className="text-zinc-500" />
+                          <p className="text-white text-sm font-bold">{booking.time}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <StatusBadge status={booking.status} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
                 <TrendingUp size={40} className="mx-auto text-zinc-800 mb-4" />
                 <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">No recent activity detected</p>
-            </div>
+              </div>
+            )}
         </div>
       </div>
     </div>
@@ -227,4 +212,30 @@ function StatCard({ title, value, icon, color, iconColor }) {
         </div>
       </div>
     );
+}
+
+// Status Badge Component with color coding
+function StatusBadge({ status }) {
+  const getStatusStyles = (status) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return { bg: "bg-emerald-500/20", text: "text-emerald-500", border: "border-emerald-500/30" };
+      case "pending":
+        return { bg: "bg-yellow-500/20", text: "text-yellow-500", border: "border-yellow-500/30" };
+      case "cancelled":
+        return { bg: "bg-red-500/20", text: "text-red-500", border: "border-red-500/30" };
+      case "confirmed":
+        return { bg: "bg-blue-500/20", text: "text-blue-500", border: "border-blue-500/30" };
+      default:
+        return { bg: "bg-zinc-500/20", text: "text-zinc-500", border: "border-zinc-500/30" };
+    }
+  };
+
+  const styles = getStatusStyles(status);
+
+  return (
+    <span className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest ${styles.bg} ${styles.text} border ${styles.border}`}>
+      {status || "Unknown"}
+    </span>
+  );
 }

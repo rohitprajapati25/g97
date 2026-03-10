@@ -12,6 +12,7 @@ const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Services = React.lazy(() => import("./pages/Services"));
 const Products = React.lazy(() => import("./pages/Products"));
 const Bookings = React.lazy(() => import("./pages/Bookings"));
+const Settings = React.lazy(() => import("./pages/Settings"));
 const Home = React.lazy(() => import("./pages/user/Home"));
 const Ulogin = React.lazy(() => import("./pages/user/Ulogin"));
 const Register = React.lazy(() => import("./pages/user/Register"));
@@ -41,6 +42,7 @@ function App() {
               <Route path="/admin/services" element={<Services />} />
               <Route path="/admin/products" element={<Products />} />
               <Route path="/bookings" element={<Bookings />} />
+              <Route path="/admin/settings" element={<Settings />} />
             </Route>
           </Route>
 
