@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Plus, Trash2, Edit3, X, Image as ImageIcon, IndianRupee, Sparkles, Box } from "lucide-react";
@@ -76,38 +77,48 @@ function Products() {
     formData.append("description", form.description);
     if (image) formData.append("image", image);
 
+    // Store previous state for rollback
+    const prevProducts = [...products];
+    const tempId = editingId || `temp-${Date.now()}`;
+    const tempProduct = { _id: tempId, name: form.name, price: form.price, description: form.description, image: preview };
+
     try {
       if (editingId) {
-        // UPDATE
+        // Optimistic update - update immediately
+        setProducts(prev => prev.map(p => p._id === editingId ? { ...p, ...form, image: preview } : p));
         await api.put(`/products/${editingId}`, formData, {
           headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
         });
-        alert("Product updated successfully!");
       } else {
-        // CREATE
-        await api.post("/products", formData, {
+        // Optimistic add - show immediately
+        setProducts(prev => [tempProduct, ...prev]);
+        const res = await api.post("/products", formData, {
           headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
         });
-        alert("Product added to inventory!");
+        // Replace temp with real
+        setProducts(prev => prev.map(p => p._id === tempId ? res.data.product : p));
       }
       cancelEdit();
-      fetchProducts();
     } catch (err) {
       console.error(err);
+      setProducts(prevProducts); // Rollback on error
       alert("Operation failed. Check if you are logged in.");
     }
   };
 
   const deleteProduct = async (id) => {
     if (!window.confirm("Delete this product from inventory?")) return;
+    const prevProducts = [...products];
+    // Optimistic delete - remove immediately
+    setProducts(prev => prev.filter(p => p._id !== id));
     try {
       const token = localStorage.getItem("adminToken");
       await api.delete(`/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setProducts(products.filter(p => p._id !== id));
     } catch (err) {
       console.error(err);
+      setProducts(prevProducts); // Rollback on error
     }
   };
 

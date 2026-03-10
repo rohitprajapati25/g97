@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "../../components/Navbar";
 import api from "../../api/axios";
+import Footer from "../../components/Footer"
 
 function UserStore() {
   const [products, setProducts] = useState([]);
@@ -169,17 +170,7 @@ function UserStore() {
       </section>
 
       {/* --- MODERN FOOTER --- */}
-      <footer className="bg-slate-900 py-12 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-             <span className="text-white font-black italic">G97</span>
-             <span className="text-red-600 font-bold uppercase tracking-widest text-xs">Auto Care</span>
-          </div>
-          <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em]">
-            © {new Date().getFullYear()} G97 Auto Care • Perfection in every detail
-          </p>
-        </div>
-      </footer>
+      <Footer/>
     </div>
   );
 }

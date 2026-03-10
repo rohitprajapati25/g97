@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { Sparkles, ChevronRight, Star, Shield, Zap, ShoppingBag } from "lucide-react";
+import Footer from "../../components/Footer";
 
 function Home() {
   const navigate = useNavigate();
@@ -79,17 +80,7 @@ function Home() {
       </section>
 
       {/* --- FOOTER --- */}
-      <footer className="border-t border-white/5 py-16 bg-black">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="text-center md:text-left">
-            <p className="font-black text-3xl tracking-tighter italic uppercase">AUTO <span className="text-red-600">HUB</span></p>
-            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em]">Detailing Studio</p>
-          </div>
-          <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-            © {new Date().getFullYear()} Auto Hub Detailing Studio. Engineered for Perfection.
-          </p>
-        </div>
-      </footer>
+      <Footer/>
     </div>
   );
 }

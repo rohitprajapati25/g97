@@ -56,38 +56,48 @@ function Services() {
     Object.keys(form).forEach(key => formData.append(key, form[key]));
     if (imageFile) formData.append("image", imageFile);
 
+    // Store previous state for rollback
+    const prevServices = [...services];
+    const tempId = editingId || `temp-${Date.now()}`;
+    const tempService = { _id: tempId, ...form, image: imageFile ? URL.createObjectURL(imageFile) : null };
+
     try {
       if (editingId) {
-        // UPDATE EXISTING SERVICE
+        // Optimistic update - update immediately
+        setServices(prev => prev.map(s => s._id === editingId ? { ...s, ...form } : s));
         await api.put(`/services/${editingId}`, formData, {
           headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
         });
-        alert("Service updated successfully!");
       } else {
-        // CREATE NEW SERVICE
-        await api.post("/services", formData, {
+        // Optimistic add - show immediately
+        setServices(prev => [tempService, ...prev]);
+        const res = await api.post("/services", formData, {
           headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
         });
-        alert("Service added successfully!");
+        // Replace temp with real
+        setServices(prev => prev.map(s => s._id === tempId ? res.data.service : s));
       }
       cancelEdit();
-      fetchServices();
     } catch (err) {
       console.error(err);
+      setServices(prevServices); // Rollback on error
       alert("Action failed. Please try again.");
     }
   };
 
   const deleteService = async (id) => {
     if (!window.confirm("Are you sure?")) return;
+    const prevServices = [...services];
+    // Optimistic delete - remove immediately
+    setServices(prev => prev.filter(s => s._id !== id));
     try {
       const token = localStorage.getItem("adminToken");
       await api.delete(`/services/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setServices(services.filter(s => s._id !== id));
     } catch (err) {
       console.error(err);
+      setServices(prevServices); // Rollback on error
     }
   };
 
