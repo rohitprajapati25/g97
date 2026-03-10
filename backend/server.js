@@ -8,6 +8,7 @@ const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const connectDB = require("./config/db");
 
+
 const app = express();
 
 // CORS configuration - allow all origins for production
