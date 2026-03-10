@@ -2,11 +2,17 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Plus, Trash2, Wrench, Clock, IndianRupee, Sparkles } from "lucide-react";
 
+// Dynamic BASE_URL based on environment
+const getBaseUrl = () => {
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  return isLocal ? "http://localhost:5000" : "https://g97.rerender";
+};
+
 function Services() {
   const [services, setServices] = useState([]);
   const [form, setForm] = useState({ title: "", description: "", price: "", duration: "" });
   const [imageFile, setImageFile] = useState(null);
-  const BASE_URL = "http://localhost:5000";
+  const BASE_URL = getBaseUrl();
 
   const fetchServices = async () => {
     try {

@@ -105,13 +105,22 @@ async function sendOtp(admin) {
   const text = `Your login code is ${code}. It expires in 5 minutes.`;
 
   // send email - only if credentials are properly configured
-  if (process.env.MAIL_USER && process.env.MAIL_PASS && process.env.MAIL_PASS.length > 15) {
+  const isValidEmail = process.env.MAIL_USER && 
+                        process.env.MAIL_USER !== "your-email@gmail.com" &&
+                        process.env.MAIL_PASS && 
+                        process.env.MAIL_PASS.length > 15 &&
+                        !process.env.MAIL_PASS.includes("your-");
+  
+  if (isValidEmail) {
     transporter.sendMail({
       from: process.env.MAIL_USER,
       to: admin.email,
       subject: "Your AutoHub Admin Login OTP",
       text,
-    }).catch(err => console.error("Email send failed:", err.message));
+    }).catch(err => {
+      console.error("Email send failed:", err.message);
+      console.log(`[FALLBACK DEV MODE] OTP for ${admin.email}: ${code}`);
+    });
   } else {
     console.log(`[DEV MODE] OTP for ${admin.email}: ${code}`);
   }

@@ -2,13 +2,19 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Plus, Trash2, Package, Image as ImageIcon, IndianRupee, Sparkles, Box } from "lucide-react";
 
+// Dynamic BASE_URL based on environment
+const getBaseUrl = () => {
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  return isLocal ? "http://localhost:5000" : "https://g97.rerender";
+};
+
 function Products() {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState({ name: "", price: "", description: "" });
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
 
-  const BASE_URL = "http://localhost:5000";
+  const BASE_URL = getBaseUrl();
 
   const fetchProducts = async () => {
     try {

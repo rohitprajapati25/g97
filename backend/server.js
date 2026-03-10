@@ -3,13 +3,9 @@ const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
 const morgan = require("morgan");
-require("dotenv").config();
+require("dotenv").config({ path: __dirname + "/.env" });
 const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-
-
-
-
 const connectDB = require("./config/db");
 
 const app = express();
@@ -30,7 +26,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // simple request logging in dev
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-                                           
 
 connectDB();
 app.use("/api/user", userRoutes);
@@ -41,8 +36,7 @@ app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 
-
-
 app.listen(5000, () => {
   console.log("Server running on port 5000");
 });
+
