@@ -3,14 +3,36 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 
-// Email transporter setup
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-});
+// Email transporter setup - Configure properly for production
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // TLS
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false // For production, consider proper SSL certificates
+    }
+  });
+};
+
+// Check if email is properly configured
+const isEmailConfigured = () => {
+  const mailUser = process.env.MAIL_USER;
+  const mailPass = process.env.MAIL_PASS;
+  
+  // Strict validation for production
+  return mailUser && 
+         mailUser.includes('@') &&
+         mailPass && 
+         mailPass.length > 10 &&
+         !mailPass.includes('your-') &&
+         !mailPass.includes('xxxx');
+};
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -19,28 +41,29 @@ const generateOTP = () => {
 
 // Send OTP email
 const sendOTPEmail = async (email, otp) => {
-  const isValidEmail = process.env.MAIL_USER && 
-                      process.env.MAIL_USER !== "your-email@gmail.com" &&
-                      process.env.MAIL_PASS && 
-                      process.env.MAIL_PASS.length > 15 &&
-                      !process.env.MAIL_PASS.includes("your-");
+  // Check if email is configured
+  if (!isEmailConfigured()) {
+    console.error("[EMAIL ERROR] Email not configured! Please set MAIL_USER and MAIL_PASS environment variables.");
+    // Still log OTP for development/testing
+    console.log(`[DEV MODE - EMAIL NOT CONFIGURED] OTP for ${email}: ${otp}`);
+    return { success: false, error: "Email service not configured on server" };
+  }
   
-  if (isValidEmail) {
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_USER,
-        to: email,
-        subject: "Your AutoHub Verification Code",
-        text: `Your verification code is: ${otp}. This code expires in 10 minutes.`,
-      });
-      return true;
-    } catch (err) {
-      console.error("Email send failed:", err.message);
-      return false;
-    }
-  } else {
-    console.log(`[DEV MODE] OTP for ${email}: ${otp}`);
-    return true;
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: process.env.MAIL_USER,
+      to: email,
+      subject: "Your AutoHub Verification Code",
+      text: `Your verification code is: ${otp}. This code expires in 10 minutes.`,
+    });
+    console.log(`[EMAIL SENT] OTP sent to ${email}`);
+    return { success: true };
+  } catch (err) {
+    console.error("[EMAIL ERROR] Failed to send OTP:", err.message);
+    // Log OTP for debugging even if email fails
+    console.log(`[FALLBACK - EMAIL FAILED] OTP for ${email}: ${otp}`);
+    return { success: false, error: err.message };
   }
 };
 

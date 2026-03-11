@@ -5,28 +5,36 @@ const speakeasy = require("speakeasy");
 const nodemailer = require("nodemailer");
 
 // mailer setup (use Gmail SMTP)
-// const transporter = nodemailer.createTransport({
-//   service: "gmail",
-//   auth: {
-//     user: process.env.MAIL_USER,
-//     pass: process.env.MAIL_PASS,
-//   },
-// });
+// Email transporter setup - Configure properly for production
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // TLS use karne ke liye false rakhein
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false // Yeh line live server par certificate block hone se rokegi
+    }
+  });
+};
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // TLS use karne ke liye false rakhein
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-  tls: {
-    // Yeh line live server par certificate block hone se rokegi
-    rejectUnauthorized: false 
-  }
-});
+// Check if email is properly configured
+const isEmailConfigured = () => {
+  const mailUser = process.env.MAIL_USER;
+  const mailPass = process.env.MAIL_PASS;
+  
+  // Strict validation for production
+  return mailUser && 
+         mailUser.includes('@') &&
+         mailPass && 
+         mailPass.length > 10 &&
+         !mailPass.includes('your-') &&
+         !mailPass.includes('xxxx');
+};
 
 
 
@@ -186,47 +194,27 @@ async function sendOtp(admin) {
 
   const text = `Your login code is ${code}. It expires in 5 minutes.`;
 
-  // Check if email is properly configured
-  const mailUser = process.env.MAIL_USER;
-  const mailPass = process.env.MAIL_PASS;
+  // Check if email is properly configured using the new validation
+  if (!isEmailConfigured()) {
+    console.error("[EMAIL ERROR] Email not configured! Please set MAIL_USER and MAIL_PASS environment variables.");
+    console.log(`[DEV MODE - EMAIL NOT CONFIGURED] OTP for ${admin.email}: ${code}`);
+    return;
+  }
   
-  // More strict validation for production
-  const isValidEmail = mailUser && 
-                        mailUser.includes('@gmail.com') &&
-                        mailPass && 
-                        mailPass.length > 15 &&
-                        !mailPass.includes('your-') &&
-                        !mailPass.includes('xxxx');
-  
-  if (isValidEmail) {
-    // try {
-    //   await transporter.sendMail({
-    //     from: mailUser,
-    //     to: admin.email,
-    //     subject: "Your AutoHub Admin Login OTP",
-    //     text,
-    //   });
-    //   console.log(`OTP email sent to: ${admin.email}`);
-    // } catch (err) {
-    //   console.error("Email send failed:", err.message);
-    // }
-
-    // Register function ke andar jahan email bhejte hain
-try {
-  await transporter.sendMail({
-    from: process.env.MAIL_USER,
-    to: admin.email,
-    subject: "G97 Login OTP",
-    text: `Your OTP is ${code}`,
-  });
-} catch (error) {
-  // Agar email fail ho jaye toh error console mein dikhe, par user register ho jaye
-  console.error("Email Error on Live Server:", error.message);
-}
-  } else {
-    // Fallback: Log OTP in server console for development
-    console.log(`[DEV MODE] OTP for ${admin.email}: ${code}`);
-    console.log(`[INFO] Email not configured. Set MAIL_USER and MAIL_PASS in Vercel env vars.`);
+  // Send email using the transporter
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: process.env.MAIL_USER,
+      to: admin.email,
+      subject: "G97 Login OTP",
+      text: `Your OTP is ${code}`,
+    });
+    console.log(`[EMAIL SENT] OTP sent to ${admin.email}`);
+  } catch (error) {
+    console.error("Email Error on Live Server:", error.message);
+    // Log OTP as fallback for debugging
+    console.log(`[FALLBACK - EMAIL FAILED] OTP for ${admin.email}: ${code}`);
   }
 }
 
