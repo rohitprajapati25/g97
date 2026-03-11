@@ -5,13 +5,26 @@ const speakeasy = require("speakeasy");
 const nodemailer = require("nodemailer");
 
 // mailer setup (use Gmail SMTP)
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: process.env.MAIL_USER,
+//     pass: process.env.MAIL_PASS,
+//   },
+// });
+
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465, // Ya 587 (secure: false ke saath)
+  secure: true, 
   auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
+    user: process.env.GMAIL_USER, // Aapka email
+    pass: process.env.GMAIL_APP_PASS, // Wo App Password jo image mein hai
   },
 });
+
+
 
 
 // Register Admin
