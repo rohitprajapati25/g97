@@ -34,23 +34,23 @@ const Login = () => {
     }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
-    try {
-      await api.post("/admin/register", { name, email, password, phone });
-      setSuccess("Registration successful! Please login.");
-      setIsRegister(false);
-      setName("");
-      setPhone("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Registration failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleRegister = async (e) => {
+  //   e.preventDefault();
+  //   setError("");
+  //   setSuccess("");
+  //   setLoading(true);
+  //   try {
+  //     await api.post("/admin/register", { name, email, password, phone });
+  //     setSuccess("Registration successful! Please login.");
+  //     setIsRegister(false);
+  //     setName("");
+  //     setPhone("");
+  //   } catch (err) {
+  //     setError(err.response?.data?.message || "Registration failed.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const toggleRegister = () => {
     setIsRegister(!isRegister);
@@ -93,7 +93,7 @@ const Login = () => {
           )}
 
           {isRegister ? (
-            <form onSubmit={handleRegister} className="space-y-5">
+            <form className="space-y-5">
               <div className="group">
                 <label className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2 block group-focus-within:text-red-500 transition-colors">
                   Full Name
@@ -226,7 +226,7 @@ const Login = () => {
           onClick={toggleRegister}
           className="w-full mt-4 text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
         >
-          {isRegister ? "Already have an account? Login" : "New admin? Register here"}
+          {isRegister && "Already have an account? Login"}
         </button>
         
         <p className="text-center text-gray-600 text-[10px] mt-8 uppercase tracking-[0.2em]">
