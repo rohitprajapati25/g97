@@ -16,12 +16,15 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   host: 'smtp.gmail.com',
-  port: 587, // Ya 587 (secure: false ke saath)
-  secure: true, 
+  port: 587,
+  secure: false, // TLS use karne ke liye
   auth: {
-    user: process.env.GMAIL_USER, // Aapka email
-    pass: process.env.GMAIL_APP_PASS, // Wo App Password jo image mein hai
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false // Yeh live server par connection block hone se rokta hai
+  }
 });
 
 
