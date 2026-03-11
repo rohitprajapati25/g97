@@ -1,5 +1,33 @@
 const Service = require("../models/Service");
 const cloudinary = require("../utils/cloudinary");
+const cache = require("../utils/cache");
+
+// Helper function to extract public ID from Cloudinary URL
+const extractPublicId = (url, folder) => {
+  if (!url) return null;
+  try {
+    const parts = url.split('/');
+    const filename = parts[parts.length - 1];
+    const publicId = filename.split('.')[0];
+    return `${folder}/${publicId}`;
+  } catch (err) {
+    return null;
+  }
+};
+
+// Helper function to delete image from Cloudinary
+const deleteCloudinaryImage = async (imageUrl, folder) => {
+  if (!imageUrl) return;
+  const publicId = extractPublicId(imageUrl, folder);
+  if (publicId) {
+    try {
+      await cloudinary.uploader.destroy(publicId);
+      console.log(`Deleted image: ${publicId}`);
+    } catch (err) {
+      console.error("Error deleting image from Cloudinary:", err.message);
+    }
+  }
+};
 
 // ➕ ADD SERVICE (ADMIN)
 exports.createService = async (req, res) => {
@@ -25,6 +53,9 @@ exports.createService = async (req, res) => {
       isActive: true,
     });
 
+    // Clear services cache after creating new service
+    cache.flushAll();
+
     res.status(201).json(service);
   } catch (error) {
     console.error(error);
@@ -33,8 +64,6 @@ exports.createService = async (req, res) => {
 };
 
 // 📥 GET SERVICES
-const cache = require("../utils/cache");
-
 exports.getServices = async (req, res) => {
   try {
     const key = "services";
@@ -68,19 +97,44 @@ exports.getServices = async (req, res) => {
 // ✏️ UPDATE SERVICE
 exports.updateService = async (req, res) => {
   try {
-    const service = await Service.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    const { title, description, price, duration } = req.body;
+    let updateData = { title, description, price, duration };
 
-    if (!service) {
+    // Find existing service first
+    const existingService = await Service.findById(req.params.id);
+    if (!existingService) {
       return res.status(404).json({ message: "Service not found" });
     }
 
-    res.json(service);
+    // Handle image update (if new file is provided)
+    if (req.file && req.file.buffer) {
+      // Upload new image to Cloudinary
+      const uploadResult = await cloudinary.uploader.upload(
+        `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+        {
+          folder: "services",
+        }
+      );
+      updateData.image = uploadResult.secure_url;
+
+      // Delete old image from Cloudinary if exists
+      await deleteCloudinaryImage(existingService.image, "services");
+    }
+
+    // Update the service
+    const updatedService = await Service.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    // Clear services cache after update
+    cache.flushAll();
+
+    res.status(200).json({ success: true, service: updatedService });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("Update Service Error:", error);
+    res.status(500).json({ message: "Update failed", error: error.message });
   }
 };
 
@@ -93,35 +147,18 @@ exports.deleteService = async (req, res) => {
       return res.status(404).json({ message: "Service not found" });
     }
 
+    // Delete image from Cloudinary
+    await deleteCloudinaryImage(service.image, "services");
+
     await service.deleteOne();
+
+    // Clear services cache after delete
+    cache.flushAll();
+
     res.json({ message: "Service deleted successfully" });
   } catch (error) {
+    console.error("Delete Service Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// updateService example snippet
-exports.updateService = async (req, res) => {
-  try {
-    const { title, description, price, duration } = req.body;
-    let updateData = { title, description, price, duration };
-
-    // Check if a new image was uploaded
-    if (req.file) {
-      // Yaha aap Cloudinary upload logic likhenge
-      // const result = await cloudinary.uploader.upload(req.file.path);
-      // updateData.image = result.secure_url;
-      // updateData.imagePublicId = result.public_id;
-    }
-
-    const updatedService = await Service.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
-
-    res.status(200).json({ success: true, service: updatedService });
-  } catch (error) {
-    res.status(500).json({ message: "Update failed", error: error.message });
-  }
-};

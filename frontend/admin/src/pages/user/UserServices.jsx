@@ -3,6 +3,34 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import api from "../../api/axios";
 
+// Generate time slots from 9 AM to 6 PM in 12-hour format with AM/PM
+const generateTimeSlots = () => {
+  const slots = [];
+  for (let hour = 9; hour <= 18; hour++) {
+    const h = hour > 12 ? hour - 12 : hour;
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = h === 0 ? 12 : h;
+    slots.push(`${displayHour}:00 ${ampm}`);
+    if (hour < 18) {
+      slots.push(`${displayHour}:30 ${ampm}`);
+    }
+  }
+  return slots;
+};
+
+// Convert 12-hour format to 24-hour for API
+const convertTo24Hour = (time12h) => {
+  if (!time12h) return '';
+  const [time, modifier] = time12h.split(/(?=[AP]M)/i);
+  let [hours, minutes] = time.split(':');
+  hours = parseInt(hours, 10);
+  if (hours === 12) hours = 0;
+  if (modifier.toUpperCase() === 'PM') hours += 12;
+  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+
 function UserServices() {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
@@ -10,8 +38,6 @@ function UserServices() {
   const [showModal, setShowModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [booking, setBooking] = useState({
-    userName: "",
-    phone: "",
     carType: "Sedan",
     date: "",
     time: "",
@@ -22,7 +48,6 @@ function UserServices() {
     const fetchServices = async () => {
       try {
         const res = await api.get("/services");
-        // API returns { total, page, limit, services }
         setServices(res.data.services || res.data || []);
       } catch (err) {
         console.error(err);
@@ -47,8 +72,12 @@ function UserServices() {
   const handleBooking = async (e) => {
     e.preventDefault();
     try {
+      const time24 = convertTo24Hour(booking.time);
+      
       await api.post("/bookings", {
-        ...booking,
+        carType: booking.carType,
+        date: booking.date,
+        time: time24,
         service: selectedService.title,
       });
       setBookingSuccess(true);
@@ -56,8 +85,6 @@ function UserServices() {
         setShowModal(false);
         setBookingSuccess(false);
         setBooking({
-          userName: "",
-          phone: "",
           carType: "Sedan",
           date: "",
           time: "",
@@ -178,27 +205,6 @@ function UserServices() {
                 </div>
 
                 <form onSubmit={handleBooking} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Full Name</label>
-                      <input
-                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all outline-none"
-                        value={booking.userName}
-                        onChange={(e) => setBooking({ ...booking, userName: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Phone</label>
-                      <input
-                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all outline-none"
-                        value={booking.phone}
-                        onChange={(e) => setBooking({ ...booking, phone: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Vehicle Category</label>
                     <select
@@ -209,7 +215,7 @@ function UserServices() {
                       <option>Sedan</option>
                       <option>SUV</option>
                       <option>Hatchback</option>
-                      <option>Luxury / Sports</option>
+                      <option>Luxury / sports</option>
                     </select>
                   </div>
 
@@ -226,13 +232,17 @@ function UserServices() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Preferred Time</label>
-                      <input
-                        type="time"
-                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all outline-none"
+                      <select
+                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all outline-none appearance-none"
                         value={booking.time}
                         onChange={(e) => setBooking({ ...booking, time: e.target.value })}
                         required
-                      />
+                      >
+                        <option value="">Select Time</option>
+                        {TIME_SLOTS.map((slot) => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -253,3 +263,4 @@ function UserServices() {
 }
 
 export default UserServices;
+

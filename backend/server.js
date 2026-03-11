@@ -8,6 +8,20 @@ const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const connectDB = require("./config/db");
 
+// Validate critical environment variables at startup
+const requiredEnvVars = ['JWT_SECRET', 'MONGODB_URI'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.error(`❌ ERROR: Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  console.error('Please create a .env file with the following variables:');
+  console.error('JWT_SECRET=your_jwt_secret_key');
+  console.error('MONGODB_URI=your_mongodb_connection_string');
+  // Don't exit in development - allow it to run with warnings
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
 
 const app = express();
 

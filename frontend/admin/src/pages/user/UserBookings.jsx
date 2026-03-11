@@ -4,6 +4,16 @@ import api from "../../api/axios";
 import Navbar from "../../components/Navbar";
 import { X, Calendar, Clock, Car, CheckCircle2, AlertCircle, Timer } from "lucide-react";
 
+// Convert 24-hour to 12-hour format for display
+const convertTo12Hour = (time24) => {
+  if (!time24) return time24;
+  const [hours, minutes] = time24.split(':');
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
 function UserBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +141,7 @@ function UserBookings() {
             <div className="p-8 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <DetailBox icon={<Calendar size={18}/>} label="Date" value={selectedBooking.date} />
-                <DetailBox icon={<Clock size={18}/>} label="Time" value={selectedBooking.time} />
+                <DetailBox icon={<Clock size={18}/>} label="Time" value={convertTo12Hour(selectedBooking.time)} />
               </div>
               
               <DetailBox icon={<Car size={18}/>} label="Vehicle Type" value={selectedBooking.carType} />

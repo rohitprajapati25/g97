@@ -2,6 +2,39 @@ const Product = require("../models/Product");
 const cloudinary = require("../utils/cloudinary");
 const cache = require("../utils/cache");
 
+// Helper function to extract public ID from Cloudinary URL
+const extractPublicId = (url, folder) => {
+  if (!url) return null;
+  try {
+    const parts = url.split('/');
+    const filename = parts[parts.length - 1];
+    const publicId = filename.split('.')[0];
+    return `${folder}/${publicId}`;
+  } catch (err) {
+    return null;
+  }
+};
+
+// Helper function to delete image from Cloudinary
+const deleteCloudinaryImage = async (imageUrl, folder) => {
+  if (!imageUrl) return;
+  const publicId = extractPublicId(imageUrl, folder);
+  if (publicId) {
+    try {
+      await cloudinary.uploader.destroy(publicId);
+      console.log(`Deleted image: ${publicId}`);
+    } catch (err) {
+      console.error("Error deleting image from Cloudinary:", err.message);
+    }
+  }
+};
+
+// Clear products cache helper
+const clearProductsCache = () => {
+  // Clear all products cache keys (simple approach - flush pattern if supported)
+  cache.flushAll();
+};
+
 /* ===============================
    ➕ CREATE PRODUCT (ADMIN)
 ================================ */
@@ -36,6 +69,9 @@ exports.createProduct = async (req, res) => {
       description: description || "",
       image: imageUrl, // 🔥 THIS WILL SHOW IN UI
     });
+
+    // Clear products cache after creating new product
+    clearProductsCache();
 
     res.status(201).json(product);
   } catch (err) {
@@ -88,9 +124,17 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    // Delete image from Cloudinary
+    await deleteCloudinaryImage(product.image, "products");
+
     await product.deleteOne();
+
+    // Clear products cache after delete
+    clearProductsCache();
+
     res.json({ message: "Deleted successfully" });
   } catch (err) {
+    console.error("DELETE PRODUCT ERROR ❌", err);
     res.status(500).json({ message: "Delete failed" });
   }
 };
@@ -118,7 +162,7 @@ exports.updateProduct = async (req, res) => {
 
     // 3. Handle Image Update (If new file is provided)
     if (req.file && req.file.buffer) {
-      // Naya image upload logic (Base64)
+      // Upload new image to Cloudinary
       const uploadRes = await cloudinary.uploader.upload(
         `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
         {
@@ -126,6 +170,9 @@ exports.updateProduct = async (req, res) => {
         }
       );
       updateData.image = uploadRes.secure_url;
+
+      // Delete old image from Cloudinary if exists
+      await deleteCloudinaryImage(product.image, "products");
     }
 
     // 4. Update Database
@@ -135,9 +182,8 @@ exports.updateProduct = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // 5. Clear Cache (Taki updated data turant dikhe)
-    // cache.flushAll(); // Agar aapka cache utility support karta hai toh sab uda do
-    // Ya specific key clear karein
+    // 5. Clear products cache after update
+    clearProductsCache();
 
     res.status(200).json(product);
   } catch (err) {
