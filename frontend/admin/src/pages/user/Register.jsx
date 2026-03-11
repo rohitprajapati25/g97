@@ -252,7 +252,6 @@ const Register = () => {
         </div>
         </div>
     </CarAuthLayout>
-    
   );
 };
 
