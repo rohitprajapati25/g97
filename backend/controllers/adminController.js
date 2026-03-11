@@ -17,13 +17,14 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false, // TLS use karne ke liye
+  secure: false, // TLS use karne ke liye false rakhein
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
   },
   tls: {
-    rejectUnauthorized: false // Yeh live server par connection block hone se rokta hai
+    // Yeh line live server par certificate block hone se rokegi
+    rejectUnauthorized: false 
   }
 });
 
@@ -198,17 +199,30 @@ async function sendOtp(admin) {
                         !mailPass.includes('xxxx');
   
   if (isValidEmail) {
-    try {
-      await transporter.sendMail({
-        from: mailUser,
-        to: admin.email,
-        subject: "Your AutoHub Admin Login OTP",
-        text,
-      });
-      console.log(`OTP email sent to: ${admin.email}`);
-    } catch (err) {
-      console.error("Email send failed:", err.message);
-    }
+    // try {
+    //   await transporter.sendMail({
+    //     from: mailUser,
+    //     to: admin.email,
+    //     subject: "Your AutoHub Admin Login OTP",
+    //     text,
+    //   });
+    //   console.log(`OTP email sent to: ${admin.email}`);
+    // } catch (err) {
+    //   console.error("Email send failed:", err.message);
+    // }
+
+    // Register function ke andar jahan email bhejte hain
+try {
+  await transporter.sendMail({
+    from: process.env.MAIL_USER,
+    to: admin.email,
+    subject: "G97 Login OTP",
+    text: `Your OTP is ${code}`,
+  });
+} catch (error) {
+  // Agar email fail ho jaye toh error console mein dikhe, par user register ho jaye
+  console.error("Email Error on Live Server:", error.message);
+}
   } else {
     // Fallback: Log OTP in server console for development
     console.log(`[DEV MODE] OTP for ${admin.email}: ${code}`);
