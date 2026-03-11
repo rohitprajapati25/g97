@@ -164,33 +164,42 @@ exports.verify2FA = async (req, res) => {
 async function sendOtp(admin) {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   admin.otpCode = code;
-  admin.otpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
+  admin.otpExpires = Date.now() + 5 * 60 * 1000;
   await admin.save();
 
   const text = `Your login code is ${code}. It expires in 5 minutes.`;
 
-  // send email - only if credentials are properly configured
-  const isValidEmail = process.env.MAIL_USER && 
-                        process.env.MAIL_USER !== "your-email@gmail.com" &&
-                        process.env.MAIL_PASS && 
-                        process.env.MAIL_PASS.length > 15 &&
-                        !process.env.MAIL_PASS.includes("your-");
+  // Check if email is properly configured
+  const mailUser = process.env.MAIL_USER;
+  const mailPass = process.env.MAIL_PASS;
+  
+  // More strict validation for production
+  const isValidEmail = mailUser && 
+                        mailUser.includes('@gmail.com') &&
+                        mailPass && 
+                        mailPass.length > 15 &&
+                        !mailPass.includes('your-') &&
+                        !mailPass.includes('xxxx');
   
   if (isValidEmail) {
-    transporter.sendMail({
-      from: process.env.MAIL_USER,
-      to: admin.email,
-      subject: "Your AutoHub Admin Login OTP",
-      text,
-    }).catch(err => {
+    try {
+      await transporter.sendMail({
+        from: mailUser,
+        to: admin.email,
+        subject: "Your AutoHub Admin Login OTP",
+        text,
+      });
+      console.log(`OTP email sent to: ${admin.email}`);
+    } catch (err) {
       console.error("Email send failed:", err.message);
-      console.log(`[FALLBACK DEV MODE] OTP for ${admin.email}: ${code}`);
-    });
+    }
   } else {
+    // Fallback: Log OTP in server console for development
     console.log(`[DEV MODE] OTP for ${admin.email}: ${code}`);
+    console.log(`[INFO] Email not configured. Set MAIL_USER and MAIL_PASS in Vercel env vars.`);
   }
-
 }
+
 
 // Login Admin - Simplified (no OTP required)
 exports.loginAdmin = async (req, res) => {
