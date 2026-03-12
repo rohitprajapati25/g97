@@ -84,20 +84,43 @@ const generateTempToken = (userId) => {
 const { sendOTP } = require('./resendEmail');
 
 const sendOTPEmail = async (email, otp) => {
-  // First try Resend
-  const resendResult = await sendOTP(email, otp);
-  if (resendResult.success) {
-    console.log(`✅ RESEND: OTP sent to ${email}`);
-    return { success: true };
+  // ✅ RESEND FIRST (Render compatible)
+  try {
+    const { sendOTP } = require('./resendEmail');
+    const resendResult = await sendOTP(email, otp);
+    if (resendResult.success) {
+      console.log(`✅ RESEND SUCCESS: ${email}`);
+      return { success: true };
+    }
+  } catch (resendErr) {
+    console.log('[RESEND ERROR - FALLBACK]', resendErr.message);
   }
 
-  // Fallback to Gmail (dev mode)
-  console.log('[RESEND FAILED] Falling back to Gmail dev mode');
-  console.log(`[DEV OTP]: ${otp}`);
-  return { success: true, isDevMode: true };
-};
-  // Check if email is configured
+  // Gmail fallback (local dev)
   if (!isEmailConfigured()) {
+    console.log(`[DEV MODE OTP] ${email}: ${otp}`);
+    return { success: true, isDevMode: true };
+  }
+
+  // Gmail SMTP
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: process.env.MAIL_USER,
+      to: email,
+      subject: "Your AutoHub Verification Code",
+      html: `<div style="font-family: Arial; padding: 20px;">
+        <h2 style="color: #dc2626;">Your OTP Code: ${otp}</h2>
+        <p>Expires in 10 minutes</p>
+      </div>`
+    });
+    console.log(`✅ GMAIL: ${email}`);
+    return { success: true };
+  } catch (gmailErr) {
+    console.error('[GMAIL ERROR]', gmailErr.message);
+    return { success: true, isDevMode: true }; // Always succeed for user experience
+  }
+};
     console.error("[EMAIL ERROR] Email not configured! Please set MAIL_USER and MAIL_PASS environment variables.");
     console.log(`[DEV MODE - OTP FOR TESTING] Email: ${email}, OTP: ${otp}`);
     return { success: true, isDevMode: true }; // Return success for dev mode so user can still register
