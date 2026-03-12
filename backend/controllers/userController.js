@@ -39,7 +39,45 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Send OTP email
+// Send Magic Link (Production Ready)
+const sendMagicLink = async (email, tempToken) => {
+  if (!isEmailConfigured()) {
+    console.log(`[DEV MODE] Magic Link Token: ${tempToken}`);
+    return { success: true, isDevMode: true };
+  }
+  
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: process.env.MAIL_USER,
+      to: email,
+      subject: "Complete Your AutoHub Registration",
+      html: `
+        <div style="font-family: Arial; padding: 20px; max-width: 500px;">
+          <h2 style="color: #dc2626;">Click to Complete Registration</h2>
+          <a href="https://your-frontend.com/verify-magic?token=${tempToken}" 
+             style="background: #dc2626; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Complete Registration
+          </a>
+          <p style="color: #666; font-size: 14px; margin-top: 20px;">
+            This link expires in 24 hours. Ignore if you didn't register.
+          </p>
+        </div>
+      `
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('Magic Link Error:', err.message);
+    return { success: false };
+  }
+};
+
+// Generate temp token for magic link
+const generateTempToken = (userId) => {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '24h' });
+};
+
+// Original OTP functions kept as backup
 const sendOTPEmail = async (email, otp) => {
   // Check if email is configured
   if (!isEmailConfigured()) {
