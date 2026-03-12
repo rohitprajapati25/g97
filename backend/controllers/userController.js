@@ -80,8 +80,22 @@ const generateTempToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '24h' });
 };
 
-// Original OTP functions kept as backup
+// ✅ RESEND IMPLEMENTATION (RENDER COMPATIBLE)
+const { sendOTP } = require('./resendEmail');
+
 const sendOTPEmail = async (email, otp) => {
+  // First try Resend
+  const resendResult = await sendOTP(email, otp);
+  if (resendResult.success) {
+    console.log(`✅ RESEND: OTP sent to ${email}`);
+    return { success: true };
+  }
+
+  // Fallback to Gmail (dev mode)
+  console.log('[RESEND FAILED] Falling back to Gmail dev mode');
+  console.log(`[DEV OTP]: ${otp}`);
+  return { success: true, isDevMode: true };
+};
   // Check if email is configured
   if (!isEmailConfigured()) {
     console.error("[EMAIL ERROR] Email not configured! Please set MAIL_USER and MAIL_PASS environment variables.");
