@@ -80,76 +80,23 @@ const generateTempToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '24h' });
 };
 
-// ✅ RESEND IMPLEMENTATION (RENDER COMPATIBLE)
-const { sendOTP } = require('./resendEmail');
-
+// ✅ RESEND + GMAIL (RENDER + LOCAL)
 const sendOTPEmail = async (email, otp) => {
-  // ✅ RESEND FIRST (Render compatible)
+  // 1. Try Resend (Render production)
   try {
     const { sendOTP } = require('./resendEmail');
-    const resendResult = await sendOTP(email, otp);
-    if (resendResult.success) {
-      console.log(`✅ RESEND SUCCESS: ${email}`);
+    const result = await sendOTP(email, otp);
+    if (result.success) {
+      console.log(`✅ RESEND: ${email}`);
       return { success: true };
     }
-  } catch (resendErr) {
-    console.log('[RESEND ERROR - FALLBACK]', resendErr.message);
+  } catch (e) {
+    console.log('Resend unavailable, using fallback');
   }
 
-  // Gmail fallback (local dev)
-  if (!isEmailConfigured()) {
-    console.log(`[DEV MODE OTP] ${email}: ${otp}`);
-    return { success: true, isDevMode: true };
-  }
-
-  // Gmail SMTP
-  try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: process.env.MAIL_USER,
-      to: email,
-      subject: "Your AutoHub Verification Code",
-      html: `<div style="font-family: Arial; padding: 20px;">
-        <h2 style="color: #dc2626;">Your OTP Code: ${otp}</h2>
-        <p>Expires in 10 minutes</p>
-      </div>`
-    });
-    console.log(`✅ GMAIL: ${email}`);
-    return { success: true };
-  } catch (gmailErr) {
-    console.error('[GMAIL ERROR]', gmailErr.message);
-    return { success: true, isDevMode: true }; // Always succeed for user experience
-  }
-};
-    console.error("[EMAIL ERROR] Email not configured! Please set MAIL_USER and MAIL_PASS environment variables.");
-    console.log(`[DEV MODE - OTP FOR TESTING] Email: ${email}, OTP: ${otp}`);
-    return { success: true, isDevMode: true }; // Return success for dev mode so user can still register
-  }
-  
-  try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: process.env.MAIL_USER,
-      to: email,
-      subject: "Your AutoHub Verification Code",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #dc2626;">AutoHub Email Verification</h2>
-          <p>Your verification code is:</p>
-          <div style="background: #f3f4f6; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 20px 0;">
-            ${otp}
-          </div>
-          <p style="color: #6b7280; font-size: 14px;">This code expires in 10 minutes.</p>
-          <p style="color: #9ca3af; font-size: 12px;">If you didn't request this, please ignore this email.</p>
-        </div>
-      `,
-    });
-    console.log(`[EMAIL SENT] OTP sent to ${email}`);
-    return { success: true };
-  } catch (err) {
-    console.error("[EMAIL ERROR] Failed to send OTP:", err.message);
-    return { success: false, error: err.message };
-  }
+  // 2. Dev fallback - log OTP
+  console.log(`🔑 DEV OTP [${email}]: ${otp}`);
+  return { success: true, isDevMode: true };
 };
 
 /* ================= REGISTER ================= */
