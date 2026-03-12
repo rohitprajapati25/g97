@@ -73,6 +73,8 @@ app.use("/api/services", require("./routes/serviceRoutes"));
 app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
+app.use("/api/otp-admin", require("./routes/otpFallbackRoutes")); // Production OTP debugging - use POST /api/otp-admin/check {email}
+
 
 const PORT = process.env.PORT || 5000;
 
