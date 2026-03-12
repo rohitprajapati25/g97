@@ -3,7 +3,14 @@ const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
 const morgan = require("morgan");
-require("dotenv").config({ path: __dirname + "/.env" });
+// Load .env file for local development only
+// In production (Render/Vercel), use environment variables set in dashboard
+if (process.env.NODE_ENV !== 'production') {
+  require("dotenv").config({ path: __dirname + "/.env" });
+} else {
+  // For production, just ensure config is loaded
+  require("dotenv").config();
+}
 const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const connectDB = require("./config/db");
@@ -44,9 +51,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // simple request logging in dev
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Connect to DB (only if not in serverless environment)
-if (process.env.VERCEL === undefined) {
+// Connect to DB
+// For local development: always connect
+// For production (Render/Vercel): always connect (web service, not serverless)
+const isLocal = !process.env.NODE_ENV || process.env.NODE_ENV !== 'production';
+
+if (isLocal) {
   connectDB();
+} else {
+  // Production - try to connect, but don't fail if MongoDB URI is missing in dev
+  if (mongoUri) {
+    connectDB();
+    console.log("✅ Production mode: Database connection initiated");
+  }
 }
 
 app.use("/api/user", userRoutes);

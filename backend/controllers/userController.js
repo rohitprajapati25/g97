@@ -79,16 +79,22 @@ exports.registerUser = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    if (!name || !email || !password)
+    console.log("📝 Registration request received:", { name, email });
+
+    if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields required" });
+    }
 
     const exists = await User.findOne({ email });
-    if (exists)
+    if (exists) {
+      console.log("⚠️ User already exists:", email);
       return res.status(400).json({ message: "User already exists" });
+    }
 
     // Generate OTP
     const otp = generateOTP();
     const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    console.log("🔢 Generated OTP:", otp);
 
     // Create user with OTP (not verified yet)
     const user = await User.create({
@@ -102,16 +108,31 @@ exports.registerUser = async (req, res) => {
       otpExpires: otpExpires,
     });
 
-    // Send OTP email
-    const emailResult = await sendOTPEmail(email, otp);
+    console.log("✅ User created in DB:", user._id);
 
+    // Send OTP email
+    let emailResult = { success: true, isDevMode: false };
+    try {
+      emailResult = await sendOTPEmail(email, otp);
+    } catch (emailErr) {
+      console.error("[EMAIL ERROR]:", emailErr.message);
+    }
+
+    console.log(`✅ Registration complete for: ${email}, isDevMode: ${emailResult.isDevMode}`);
+
+    // Send success response
     res.status(201).json({
       message: "Registration successful. Please verify your email with OTP.",
       userId: user._id,
       isDevMode: emailResult.isDevMode || false,
     });
+
   } catch (err) {
-    console.error("Registration Error:", err);
+    console.error("❌ Registration Error:", err);
+    // Return success anyway if user was created (for database errors after user creation)
+    if (err.message && err.message.includes('duplicate')) {
+      return res.status(400).json({ message: "User already exists" });
+    }
     res.status(500).json({ message: "Registration failed", error: err.message });
   }
 };
