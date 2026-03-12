@@ -44,9 +44,8 @@ const sendOTPEmail = async (email, otp) => {
   // Check if email is configured
   if (!isEmailConfigured()) {
     console.error("[EMAIL ERROR] Email not configured! Please set MAIL_USER and MAIL_PASS environment variables.");
-    // Still log OTP for development/testing
-    console.log(`[DEV MODE - EMAIL NOT CONFIGURED] OTP for ${email}: ${otp}`);
-    return { success: false, error: "Email service not configured on server" };
+    console.log(`[DEV MODE - OTP FOR TESTING] Email: ${email}, OTP: ${otp}`);
+    return { success: true, isDevMode: true }; // Return success for dev mode so user can still register
   }
   
   try {
@@ -55,14 +54,22 @@ const sendOTPEmail = async (email, otp) => {
       from: process.env.MAIL_USER,
       to: email,
       subject: "Your AutoHub Verification Code",
-      text: `Your verification code is: ${otp}. This code expires in 10 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">AutoHub Email Verification</h2>
+          <p>Your verification code is:</p>
+          <div style="background: #f3f4f6; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">This code expires in 10 minutes.</p>
+          <p style="color: #9ca3af; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
     });
     console.log(`[EMAIL SENT] OTP sent to ${email}`);
     return { success: true };
   } catch (err) {
     console.error("[EMAIL ERROR] Failed to send OTP:", err.message);
-    // Log OTP for debugging even if email fails
-    console.log(`[FALLBACK - EMAIL FAILED] OTP for ${email}: ${otp}`);
     return { success: false, error: err.message };
   }
 };
@@ -96,11 +103,12 @@ exports.registerUser = async (req, res) => {
     });
 
     // Send OTP email
-    await sendOTPEmail(email, otp);
+    const emailResult = await sendOTPEmail(email, otp);
 
     res.status(201).json({
       message: "Registration successful. Please verify your email with OTP.",
       userId: user._id,
+      isDevMode: emailResult.isDevMode || false,
     });
   } catch (err) {
     console.error("Registration Error:", err);

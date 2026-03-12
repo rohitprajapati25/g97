@@ -39,7 +39,14 @@ const Register = () => {
         email: form.email,
         password: form.password,
       });
-      setSuccess(res.data.message || "Registration successful!");
+      
+      // Show dev mode notice if email not configured
+      if (res.data.isDevMode) {
+        setSuccess("Registration successful! DEV MODE: Check server console for OTP.");
+      } else {
+        setSuccess(res.data.message || "Registration successful!");
+      }
+      
       setStep(2);
       // Start resend timer
       setResendTimer(60);
