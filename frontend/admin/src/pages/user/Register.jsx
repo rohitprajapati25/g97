@@ -94,7 +94,13 @@ const Register = () => {
       setSuccess(res.data.message || "Email verified successfully!");
       setTimeout(() => navigate("/user/login"), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || "Verification failed");
+      const errorMsg = err.response?.data?.message || "Verification failed";
+      if (errorMsg.includes("3 failed attempts")) {
+        console.log('🎯 3 FAILED DETECTED IN CATCH - SHOWING MODAL');
+        setShowFailedModal(true);
+        return;
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
