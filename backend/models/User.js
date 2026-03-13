@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    otpCode: {
+    otpHash: {
       type: String,
       default: null,
     },
@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    ipAddress: String,
   },
 
   { timestamps: true }
