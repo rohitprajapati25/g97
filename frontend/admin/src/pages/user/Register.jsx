@@ -278,7 +278,14 @@ const Register = () => {
       
       <FailedAttemptsModal 
         isOpen={showFailedModal} 
-        onClose={() => setShowFailedModal(false)} 
+        onClose={() => setShowFailedModal(false)}
+        resetForm={() => {
+          setStep(1);
+          setOtp("");
+          setError("");
+          setSuccess("");
+          setForm({name:"", email:"", password:"", confirmPassword:""});
+        }}
       />
     </>
   );

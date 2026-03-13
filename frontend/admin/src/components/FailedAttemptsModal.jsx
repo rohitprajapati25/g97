@@ -1,12 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 
-const FailedAttemptsModal = ({ isOpen, onClose }) => {
+const FailedAttemptsModal = ({ isOpen, onClose, resetForm }) => {
   const navigate = useNavigate();
 
   if (!isOpen) return null;
 
   const handleOkClick = () => {
-    navigate('/user/register');
+    if (resetForm) {
+      resetForm();
+    } else {
+      navigate('/user/register');
+    }
     onClose();
   };
 
