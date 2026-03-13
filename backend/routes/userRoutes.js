@@ -1,18 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const {
-  registerUser,
-  loginUser,
-  verifyOTP,
-  resendOTP,
-  getProfile
-} = require("../controllers/userController");
+const userController = require("../controllers/userController");
 const userAuth = require("../middleware/userAuth");
 
-router.post("/register", registerUser);
-router.post("/verify-otp", verifyOTP);
-router.post("/resend-otp", resendOTP);
-router.post("/login", loginUser);
-router.get("/profile", userAuth, getProfile);
+router.post("/register", userController.registerUser);
+router.post("/verify-otp", userController.verifyOTP);
+// router.post("/resend-otp", userController.resendOTP); // Removed
+router.post("/login", userController.loginUser);
+router.get("/profile", userAuth, userController.getProfile);
 
 module.exports = router;
+
