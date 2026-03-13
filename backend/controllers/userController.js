@@ -174,10 +174,10 @@ exports.getProfile = async (req, res) => {
 };
 
 module.exports = {
-  registerUser,
-  verifyOTP,
-  resendOTP,
-  loginUser,
-  getProfile
+  registerUser: registerUser,
+  verifyOTP: verifyOTP,
+  resendOTP: resendOTP,
+  loginUser: loginUser,
+  getProfile: getProfile
 };
 
