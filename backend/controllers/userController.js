@@ -2,46 +2,16 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { Resend } = require('resend'); // LIVE RESEND
+const { Resend } = require('resend');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
-
 const hashOTP = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
 
-// RESEND + Industry Security
-const sendOTPEmail = async (email, plainOTP) => {
-  const hashedOTP = hashOTP(plainOTP);
-  console.log(`🔐 RESEND OTP [${email}]: ${plainOTP} → ${hashedOTP.slice(0,16)}...`);
+// TEMP USER - Delete after 15min if not verified
+const TempUser = require("../models/TempUser"); 
 
-  try {
-    const data = await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'noreply@yourdomain.com',
-      to: [email],
-      subject: "🔐 AutoHub - OTP Verification",
-      html: `
-<!DOCTYPE html>
-<html>
-<body style="font-family: Arial; max-width: 500px; margin: 0 auto; padding: 40px;">
-  <h1 style="color: #dc2626;">AutoHub OTP</h1>
-  <div style="font-size: 48px; font-weight: bold; letter-spacing: 12px; background: #dc2626; color: white; padding: 30px; border-radius: 16px; text-align: center;">
-    ${plainOTP}
-  </div>
-  <p style="color: #666; margin-top: 20px;">Valid 10 minutes. Don't share.</p>
-</body>
-</html>`,
-    });
-
-    console.log(`✅ RESEND LIVE → ${email} ID: ${data.id}`);
-    return { success: true, hashedOTP };
-  } catch (error) {
-    console.error(`❌ RESEND ERROR [${email}]:`, error.message);
-    return { success: false, error: error.message };
-  }
-};
-
-// Rate Limiting
 const rateLimit = new Map();
 const checkRateLimit = (ip, email) => {
   const key = `${ip}:${email}`;
@@ -54,161 +24,147 @@ const checkRateLimit = (ip, email) => {
   return true;
 };
 
-/* REGISTER */
-exports.registerUser = async (req, res) => {
-  const ip = req.ip || req.connection.remoteAddress;
-  const { name, email, password } = req.body;
+const sendOTPEmail = async (email, plainOTP) => {
+  console.log(`🔐 TEMP REG [${email}]: ${plainOTP}`);
+  
+  try {
+    await resend.emails.send({
+      from: process.env.FROM_EMAIL || 'AutoHub <noreply@resend.dev>',
+      to: [email],
+      subject: 'AutoHub - Complete Registration [OTP]',
+      html: `<h1 style="font-size: 60px; text-align: center;">${plainOTP}</h1>`
+    });
+    return true;
+  } catch (error) {
+    console.error(`❌ RESEND [${email}]:`, error.message);
+    return false;
+  }
+};
 
-  // Input validation
-  if (!name?.trim() || !email || password.length < 6) {
-    return res.status(400).json({ message: "Invalid input" });
+exports.registerUser = async (req, res) => {
+  const ip = req.ip || 'unknown';
+  const { name, email, password, phone } = req.body;
+
+  // STRICT VALIDATION
+  if (!name?.trim() || name.length < 2 || !email || !password || password.length < 6) {
+    return res.status(400).json({ message: 'Invalid input' });
   }
 
-  // Rate limit
   if (!checkRateLimit(ip, email)) {
-    return res.status(429).json({ message: "Too many requests" });
+    return res.status(429).json({ message: 'Too many attempts' });
   }
 
   try {
-    // Cleanup old
-    await User.deleteMany({
-      email: email.toLowerCase(),
-      isVerified: false,
-      otpExpires: { $lt: new Date(Date.now() - 15*60*1000) }
-    });
-
-    // Exists check
-    if (await User.findOne({ email: email.toLowerCase() })) {
-      return res.status(400).json({ message: "Email already registered" });
+    // 1. EMAIL VERIFICATION FIRST - NO DATA YET
+    const otp = generateOTP();
+    
+    const emailSent = await sendOTPEmail(email.toLowerCase().trim(), otp);
+    if (!emailSent) {
+      return res.status(500).json({ message: 'Email service unavailable' });
     }
 
-    const otp = generateOTP();
-    const hashedOTP = hashOTP(otp);
-    const otpExpires = Date.now() + 10*60*1000;
-
-    const user = new User({
+    // 2. OTP SENT ✓ - Create TEMP user (delete if not verified)
+    const tempUser = new TempUser({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password,
-      isVerified: false,
-      otpHash: hashedOTP,
-      otpExpires: new Date(otpExpires),
-      otpAttempts: 0,
+      password, // Will hash
+      phone: phone || '',
+      otpCode: otp,
+      otpExpires: new Date(Date.now() + 10*60*1000),
       ipAddress: ip
     });
-    await user.save();
+    await tempUser.save();
 
-    const result = await sendOTPEmail(email, otp);
-
+    console.log(`📧 TEMP USER CREATED ${email} - Verify in 10min or DELETE`);
+    
     res.status(201).json({
-      message: "Registration successful",
-      userId: user._id,
-      emailSent: result.success,
-      isDevMode: !result.success
+      message: 'Check email for OTP to complete registration',
+      tempId: tempUser._id,
+      isDevMode: false
     });
   } catch (error) {
-    console.error("Register error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Temp reg error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-/* VERIFY */
 exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
-  const ip = req.ip || req.connection.remoteAddress;
-
-  if (!checkRateLimit(ip, email)) {
-    return res.status(429).json({ message: "Rate limited" });
-  }
 
   try {
-    const user = await User.findOne({ 
-      email: email.toLowerCase(),
-      isVerified: false 
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: "No registration found" });
-    }
-
-    if (Date.now() > user.otpExpires.getTime()) {
-      await user.deleteOne();
-      return res.status(400).json({ message: "OTP expired" });
-    }
-
-    if (hashOTP(otp) !== user.otpHash) {
-      user.otpAttempts += 1;
-      await user.save();
-
-      if (user.otpAttempts >= 3) {
-        await user.deleteOne();
-        return res.status(400).json({ message: "Too many attempts" });
-      }
-
-      return res.status(400).json({ message: `${3-user.otpAttempts} attempts left` });
-    }
-
-    // Verified
-    user.isVerified = true;
-    user.otpHash = null;
-    user.otpExpires = null;
-    user.otpAttempts = 0;
-    await user.save();
-
-    res.json({ message: "Verified successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Verification failed" });
-  }
-};
-
-/* RESEND */
-exports.resendOTP = async (req, res) => {
-  const { email } = req.body;
-  const ip = req.ip || req.connection.remoteAddress;
-
-  if (!checkRateLimit(ip, email)) {
-    return res.status(429).json({ message: "Rate limited" });
-  }
-
-  try {
-    const user = await User.findOne({ 
-      email: email.toLowerCase(),
-      isVerified: false,
+    // 1. Find TEMP user
+    const tempUser = await TempUser.findOne({ 
+      email: email.toLowerCase().trim(),
+      otpCode: otp,
       otpExpires: { $gt: new Date() }
     });
 
-    if (!user) {
-      return res.status(400).json({ message: "No pending OTP" });
-  }
+    if (!tempUser) {
+      return res.status(400).json({ message: 'Invalid/expired OTP' });
+    }
 
-    const otp = generateOTP();
-    const hashedOTP = hashOTP(otp);
-    user.otpHash = hashedOTP;
-    user.otpExpires = new Date(Date.now() + 10*60*1000);
-    user.otpAttempts = 0;
+    // 2. ALL GOOD - Create PERMANENT User
+    const user = new User({
+      name: tempUser.name,
+      email: tempUser.email,
+      password: tempUser.password, // Auto hash
+      phone: tempUser.phone,
+      role: 'user',
+      isVerified: true, // Verified already!
+      ipAddress: tempUser.ipAddress
+    });
     await user.save();
 
-    const result = await sendOTPEmail(email, otp);
-    res.json({ message: "OTP resent", success: result.success });
+    // 3. Delete TEMP
+    await TempUser.deleteOne({ _id: tempUser._id });
+
+    console.log(`✅ REG COMPLETE → PERMANENT ${user.email}`);
+    
+    res.json({ message: 'Registration complete! You can login now' });
   } catch (error) {
-    res.status(500).json({ message: "Resend failed" });
+    console.error('Verify error:', error);
+    res.status(500).json({ message: 'Verification failed' });
   }
 };
 
-/* LOGIN */
+exports.resendOTP = async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    const tempUser = await TempUser.findOne({ 
+      email: email.toLowerCase().trim(),
+      otpExpires: { $gt: new Date() }
+    });
+
+    if (!tempUser) {
+      return res.status(400).json({ message: 'No pending registration' });
+    }
+
+    const newOtp = generateOTP();
+    tempUser.otpCode = newOtp;
+    tempUser.otpExpires = new Date(Date.now() + 10*60*1000);
+    await tempUser.save();
+
+    await sendOTPEmail(email, newOtp);
+    res.json({ message: 'New OTP sent' });
+  } catch (error) {
+    res.status(500).json({ message: 'Resend failed' });
+  }
+};
+
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
     
-    if (!user || !user.isVerified || !await bcrypt.compare(password, user.password)) {
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!user || !await bcrypt.compare(password, user.password)) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { name: user.name, email: user.email } });
   } catch (error) {
-    res.status(500).json({ message: "Login error" });
+    res.status(500).json({ message: 'Login error' });
   }
 };
 
