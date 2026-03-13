@@ -3,14 +3,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { Resend } = require('resend');
+const TempUser = require("../models/TempUser");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 const hashOTP = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
-
-// TEMP USER - Delete after 15min if not verified
-const TempUser = require("../models/TempUser"); 
 
 const rateLimit = new Map();
 const checkRateLimit = (ip, email) => {
@@ -41,11 +39,10 @@ const sendOTPEmail = async (email, plainOTP) => {
   }
 };
 
-exports.registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   const ip = req.ip || 'unknown';
   const { name, email, password, phone } = req.body;
 
-  // STRICT VALIDATION
   if (!name?.trim() || name.length < 2 || !email || !password || password.length < 6) {
     return res.status(400).json({ message: 'Invalid input' });
   }
@@ -55,7 +52,6 @@ exports.registerUser = async (req, res) => {
   }
 
   try {
-    // 1. EMAIL VERIFICATION FIRST - NO DATA YET
     const otp = generateOTP();
     
     const emailSent = await sendOTPEmail(email.toLowerCase().trim(), otp);
@@ -63,11 +59,10 @@ exports.registerUser = async (req, res) => {
       return res.status(500).json({ message: 'Email service unavailable' });
     }
 
-    // 2. OTP SENT ✓ - Create TEMP user (delete if not verified)
     const tempUser = new TempUser({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password, // Will hash
+      password,
       phone: phone || '',
       otpCode: otp,
       otpExpires: new Date(Date.now() + 10*60*1000),
@@ -75,24 +70,22 @@ exports.registerUser = async (req, res) => {
     });
     await tempUser.save();
 
-    console.log(`📧 TEMP USER CREATED ${email} - Verify in 10min or DELETE`);
+    console.log(`📧 TEMP USER CREATED ${email}`);
     
     res.status(201).json({
-      message: 'Check email for OTP to complete registration',
-      tempId: tempUser._id,
-      isDevMode: false
+      message: 'Check email for OTP',
+      tempId: tempUser._id
     });
   } catch (error) {
-    console.error('Temp reg error:', error);
+    console.error('Register error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-exports.verifyOTP = async (req, res) => {
+const verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
 
   try {
-    // 1. Find TEMP user
     const tempUser = await TempUser.findOne({ 
       email: email.toLowerCase().trim(),
       otpCode: otp,
@@ -103,31 +96,28 @@ exports.verifyOTP = async (req, res) => {
       return res.status(400).json({ message: 'Invalid/expired OTP' });
     }
 
-    // 2. ALL GOOD - Create PERMANENT User
     const user = new User({
       name: tempUser.name,
       email: tempUser.email,
-      password: tempUser.password, // Auto hash
+      password: tempUser.password,
       phone: tempUser.phone,
       role: 'user',
-      isVerified: true, // Verified already!
-      ipAddress: tempUser.ipAddress
+      isVerified: true
     });
     await user.save();
 
-    // 3. Delete TEMP
     await TempUser.deleteOne({ _id: tempUser._id });
 
-    console.log(`✅ REG COMPLETE → PERMANENT ${user.email}`);
+    console.log(`✅ COMPLETE ${user.email}`);
     
-    res.json({ message: 'Registration complete! You can login now' });
+    res.json({ message: 'Registration complete!' });
   } catch (error) {
     console.error('Verify error:', error);
     res.status(500).json({ message: 'Verification failed' });
   }
 };
 
-exports.resendOTP = async (req, res) => {
+const resendOTP = async (req, res) => {
   const { email } = req.body;
   
   try {
@@ -152,7 +142,7 @@ exports.resendOTP = async (req, res) => {
   }
 };
 
-exports.loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
@@ -168,16 +158,16 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-exports.getProfile = async (req, res) => {
+const getProfile = async (req, res) => {
   const user = await User.findById(req.user.id).select('-password');
   res.json(user);
 };
 
 module.exports = {
-  registerUser: registerUser,
-  verifyOTP: verifyOTP,
-  resendOTP: resendOTP,
-  loginUser: loginUser,
-  getProfile: getProfile
+  registerUser,
+  verifyOTP,
+  resendOTP,
+  loginUser,
+  getProfile
 };
 
