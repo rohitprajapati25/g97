@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 exports.sendOTP = async (email, otp) => {
   try {
     const data = await resend.emails.send({
-from: 'onboarding@resend.dev', // FREE - No domain verification needed
+      from: process.env.FROM_EMAIL || 'pr4901958@gmail.com', // Use env var or your verified email
       to: [email],
       subject: 'Your AutoHub OTP Code',
       html: `
