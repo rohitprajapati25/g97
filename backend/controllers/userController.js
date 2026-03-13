@@ -1,42 +1,54 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
+const { sendOTP } = require("./resendEmail");
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
+/* RESEND OTP - For users who need new code */
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email required" });
+
+    const user = await User.findOne({ 
+      email, 
+      isVerified: false,
+      otpExpires: { $gt: Date.now() } // Must have valid OTP window
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "No pending verification found for this email. Please register again." });
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+    const otpExpires = Date.now() + 10 * 60 * 1000;
+    user.otpCode = otp;
+    user.otpExpires = otpExpires;
+    user.otpAttempts = 0; // Reset attempts on resend
+    await user.save();
+
+    await sendOTPEmail(email, otp);
+
+    console.log(`✅ RESEND: New OTP sent to ${email}`);
+    res.json({ message: "New OTP sent! Check your email." });
+  } catch (err) {
+    console.error("Resend Error:", err);
+    res.status(500).json({ message: "Resend failed" });
+  }
+};
+
 const sendOTPEmail = async (email, otp) => {
   console.log(`🔑 OTP for ${email}: ${otp}`);
-  
-try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
-      },
-      tls: { rejectUnauthorized: false }
-    });
-    await transporter.sendMail({
-      from: process.env.MAIL_USER,
-      to: email,
-      subject: "AutoHub - Your Verification Code",
-      html: `
-        <div style="font-family: Arial; padding: 20px;">
-          <h2>Your OTP Code: ${otp}</h2>
-          <p>Valid for 10 minutes</p>
-        </div>
-      `
-    });
-    console.log(`✅ EMAIL SENT to ${email}`);
-  } catch (err) {
-    console.error(`❌ EMAIL ERROR: ${err.message}`);
-    console.log('Use console OTP above 👆');
+  const result = await sendOTP(email, otp);
+  if (!result.success) {
+    console.error(`❌ RESEND ERROR: ${result.error}`);
+    console.log('OTP logged above - check email or try resend');
+  } else {
+    console.log(`✅ RESEND EMAIL SENT to ${email}`);
   }
-  return { success: true };
+  return result;
 };
 
 /* REGISTER - CLEANUP OLD + ABANDONED */
