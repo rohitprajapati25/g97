@@ -1,9 +1,56 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 const { sendOTP } = require("./resendEmail");
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const sendOTPEmail = async (email, otp) => {
+  console.log(`🔑 OTP for ${email}: ${otp}`);
+  
+  // Try Resend first
+  const resendResult = await sendOTP(email, otp);
+  if (resendResult.success) {
+    console.log(`✅ RESEND sent to ${email}`);
+    return resendResult;
+  }
+  
+  // Gmail fallback
+  console.log('🔄 RESEND failed, using Gmail fallback');
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+      tls: { rejectUnauthorized: false }
+    });
+    
+    await transporter.sendMail({
+      from: process.env.MAIL_USER,
+      to: email,
+      subject: "AutoHub - Your Verification Code",
+      html: `
+        <div style="font-family: Arial; padding: 20px; text-align: center;">
+          <h2 style="color: #dc2626;">🛞 Your OTP Code</h2>
+          <div style="font-size: 48px; font-weight: bold; letter-spacing: 20px; background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p style="color: #6b7280;">Valid for 10 minutes</p>
+        </div>
+      `
+    });
+    console.log(`✅ GMAIL SENT to ${email}`);
+    return { success: true };
+  } catch (gmailErr) {
+    console.error(`❌ GMAIL ERROR: ${gmailErr.message}`);
+    return { success: false, error: 'Email failed - check MAIL_USER/MAIL_PASS' };
+  }
+};
 
 /* RESEND OTP - For users who need new code */
 exports.resendOTP = async (req, res) => {
