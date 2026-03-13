@@ -2,25 +2,22 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const { sendOTP } = require("./resendEmail");
+// const { sendOTP } = require("./resendEmail"); // COMMENTED - Gmail Direct
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const sendOTPEmail = async (email, otp) => {
-  console.log(`🔑 OTP for ${email}: ${otp}`);
-  
-// Try Resend first (DETAILED LOGGING)\nconst resendResult = await sendOTP(email, otp);\nif (resendResult.success) {\n  console.log(`✅ RESEND SUCCESS to ${email}: ${otp}`);\n  return { success: true, isDevMode: false };\n}\n\nconsole.log(`⚠️ RESEND FAILED: ${resendResult.error || 'Unknown error'}`);
-  
-  // Gmail fallback
-  console.log('🔄 RESEND failed, using Gmail fallback');
+  console.log(`🔑 LIVE OTP for ${email}: ${otp}`);
+
+  // 🔥 INDUSTRY STANDARD: Gmail SMTP (Free, ANY recipient, Live ready)
   try {
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       service: 'gmail',
       port: 587,
       secure: false,
       auth: {
         user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+        pass: process.env.MAIL_PASS, // Your 16-char App Password
       },
       tls: { rejectUnauthorized: false }
     });
@@ -28,26 +25,33 @@ const sendOTPEmail = async (email, otp) => {
     await transporter.sendMail({
       from: process.env.MAIL_USER,
       to: email,
-      subject: "AutoHub - Your Verification Code",
+      subject: "🔴 AutoHub - Verify Your Email (OTP)",
       html: `
-        <div style="font-family: Arial; padding: 20px; text-align: center;">
-          <h2 style="color: #dc2626;">🛞 Your OTP Code</h2>
-          <div style="font-size: 48px; font-weight: bold; letter-spacing: 20px; background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; text-align: center; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+          <h1 style="color: #dc2626; margin-bottom: 20px;">🛞 AutoHub Verification</h1>
+          <div style="font-size: 52px; font-weight: bold; letter-spacing: 15px; background: linear-gradient(45deg, #dc2626, #ef4444); color: white; padding: 25px 20px; border-radius: 25px; margin: 30px auto; width: fit-content; box-shadow: 0 15px 35px rgba(220,38,38,0.4);">
             ${otp}
           </div>
-          <p style="color: #6b7280;">Valid for 10 minutes</p>
+          <p style="color: #374151; font-size: 18px; margin-bottom: 10px;">
+            Your verification code is valid for <strong>10 minutes</strong>.
+          </p>
+          <p style="color: #6b7280; font-size: 14px;">
+            Enter this code in the app to complete registration.
+          </p>
         </div>
       `
     });
-    console.log(`✅ GMAIL SENT to ${email}`);
+    
+    console.log(`✅ GMAIL LIVE SENT → ${email}: ${otp}`);
     return { success: true };
-  } catch (gmailErr) {
-    console.error(`❌ GMAIL ERROR: ${gmailErr.message}`);
-    return { success: false, error: 'Email failed - check MAIL_USER/MAIL_PASS' };
+  } catch (error) {
+    console.error(`❌ GMAIL FAILED [${email}]:`, error.message);
+    console.log('🔧 FIX: Check MAIL_USER/MAIL_PASS in .env (App Password needed)');
+    return { success: false, error: error.message };
   }
 };
 
-/* RESEND OTP - For users who need new code */
+/* RESEND OTP */
 exports.resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
@@ -56,55 +60,52 @@ exports.resendOTP = async (req, res) => {
     const user = await User.findOne({ 
       email, 
       isVerified: false,
-      otpExpires: { $gt: Date.now() } // Must have valid OTP window
+      otpExpires: { $gt: Date.now() }
     });
 
     if (!user) {
-      return res.status(400).json({ message: "No pending verification found for this email. Please register again." });
+      return res.status(400).json({ message: "No pending verification. Register again." });
     }
 
-    // Generate new OTP
     const otp = generateOTP();
     const otpExpires = Date.now() + 10 * 60 * 1000;
     user.otpCode = otp;
     user.otpExpires = otpExpires;
-    user.otpAttempts = 0; // Reset attempts on resend
+    user.otpAttempts = 0;
     await user.save();
 
-    await sendOTPEmail(email, otp);
-
-    console.log(`✅ RESEND: New OTP sent to ${email}`);
-    res.json({ message: "New OTP sent! Check your email." });
+    const result = await sendOTPEmail(email, otp);
+    res.json({ 
+      message: result.success ? "New OTP sent to email!" : "Check server console (email config needed)",
+      isDevMode: !result.success
+    });
   } catch (err) {
     console.error("Resend Error:", err);
-    res.status(500).json({ message: "Resend failed" });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-
-
-/* REGISTER - CLEANUP OLD + ABANDONED */
+/* REGISTER */
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
     if (!name || !email || !password) return res.status(400).json({ message: "All fields required" });
 
-    // Delete abandoned/old unverified users (user left without OTP)
+    // Cleanup abandoned registrations
     await User.deleteMany({
       email,
       isVerified: false,
-      otpExpires: { $lt: new Date(Date.now() - 15 * 60 * 1000) } // 15 minutes timeout
+      otpExpires: { $lt: new Date(Date.now() - 15 * 60 * 1000) }
     });
 
-    const exists = await User.findOne({ email });
-    if (exists) return res.status(400).json({ message: "User already exists" });
+    if (await User.findOne({ email })) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-    // Generate OTP
     const otp = generateOTP();
     const otpExpires = Date.now() + 10 * 60 * 1000;
 
-    // Create user with OTP
     const user = await User.create({
       name,
       email,
@@ -117,14 +118,20 @@ exports.registerUser = async (req, res) => {
       otpAttempts: 0,
     });
 
-const emailResult = await sendOTPEmail(email, otp);\n\nres.status(201).json({\n  message: "Registration successful. Please verify your email with OTP.",\n  userId: user._id,\n  isDevMode: !emailResult.success,  // Frontend hint: check console if email failed\n});
+    const emailResult = await sendOTPEmail(email, otp);
+
+    res.status(201).json({
+      message: emailResult.success ? "✅ Registered! Check email for OTP." : "✅ Registered (check server console for OTP)",
+      userId: user._id,
+      isDevMode: !emailResult.success
+    });
   } catch (err) {
     console.error("Registration Error:", err);
     res.status(500).json({ message: "Registration failed" });
   }
 };
 
-/* VERIFY OTP - 3 ATTEMPTS */
+/* VERIFY OTP */
 exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -136,7 +143,7 @@ exports.verifyOTP = async (req, res) => {
 
     if (Date.now() > user.otpExpires) {
       await user.deleteOne();
-      return res.status(400).json({ message: "OTP expired. Please register again." });
+      return res.status(400).json({ message: "OTP expired. Register again." });
     }
 
     if (user.otpCode !== otp) {
@@ -145,40 +152,42 @@ exports.verifyOTP = async (req, res) => {
 
       if (user.otpAttempts >= 3) {
         await user.deleteOne();
-        return res.status(400).json({ message: "3 failed attempts. Please register again." });
+        return res.status(400).json({ message: "3 failed attempts. Register again." });
       }
 
       return res.status(400).json({ 
-        message: `Invalid OTP. ${3 - user.otpAttempts} attempts left` 
+        message: `Wrong OTP. ${3 - user.otpAttempts} attempts left` 
       });
     }
 
-    // SUCCESS - Keep data forever
+    // SUCCESS
     user.isVerified = true;
     user.otpCode = null;
     user.otpExpires = null;
     user.otpAttempts = 0;
     await user.save();
 
-    res.json({ message: "Verified! You can login now." });
+    console.log(`🎉 VERIFIED: ${user.email}`);
+    res.json({ message: "✅ Email verified! Login now." });
   } catch (err) {
-    console.error('VERIFY ERROR:', err);
+    console.error('Verify Error:', err);
     res.status(500).json({ message: "Verification failed" });
   }
 };
 
+/* LOGIN */
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    if (!user.isVerified) return res.status(400).json({ message: "Please verify your email first" });
+    if (!user.isVerified) return res.status(400).json({ message: "Please verify email first" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, { expiresIn: "30m" });
+    const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, { expiresIn: "30d" });
 
     res.json({ token, role: "user", user: { name: user.name, email: user.email } });
   } catch (err) {
