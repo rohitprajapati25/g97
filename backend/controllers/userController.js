@@ -11,7 +11,8 @@ const sendOTPEmail = async (email, otp) => {
 
   // 🔥 INDUSTRY STANDARD: Gmail SMTP (Free, ANY recipient, Live ready)
   try {
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
+
       service: 'gmail',
       port: 587,
       secure: false,
