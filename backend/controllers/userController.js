@@ -86,17 +86,7 @@ exports.resendOTP = async (req, res) => {
   }
 };
 
-const sendOTPEmail = async (email, otp) => {
-  console.log(`🔑 OTP for ${email}: ${otp}`);
-  const result = await sendOTP(email, otp);
-  if (!result.success) {
-    console.error(`❌ RESEND ERROR: ${result.error}`);
-    console.log('OTP logged above - check email or try resend');
-  } else {
-    console.log(`✅ RESEND EMAIL SENT to ${email}`);
-  }
-  return result;
-};
+
 
 /* REGISTER - CLEANUP OLD + ABANDONED */
 exports.registerUser = async (req, res) => {
