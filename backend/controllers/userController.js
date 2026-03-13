@@ -1,150 +1,118 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
-const crypto = require("crypto"); // Industry: Secure OTP hash
+const crypto = require("crypto");
+const { Resend } = require('resend'); // LIVE RESEND
 
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const hashOTP = (otp) => {
-  return crypto.createHash('sha256').update(otp).digest('hex');
-};
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// INDUSTRY STANDARD: Gmail + Rate Limiting + OTP Hash
+const hashOTP = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
+
+// RESEND + Industry Security
 const sendOTPEmail = async (email, plainOTP) => {
   const hashedOTP = hashOTP(plainOTP);
-  console.log(`🔐 SECURE OTP [${email}]: ${plainOTP} → hashed`);
+  console.log(`🔐 RESEND OTP [${email}]: ${plainOTP} → ${hashedOTP.slice(0,16)}...`);
 
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS, // App Password
-      },
-      tls: { rejectUnauthorized: false }
-    });
-
-    await transporter.sendMail({
-      from: `"AutoHub Security" <${process.env.MAIL_USER}>`,
-      to: email,
-      subject: "🔐 AutoHub - Secure Verification [OTP]",
-      text: `Your AutoHub OTP: ${plainOTP} (expires in 10 min)`,
+    const data = await resend.emails.send({
+      from: process.env.FROM_EMAIL || 'noreply@yourdomain.com',
+      to: [email],
+      subject: "🔐 AutoHub - OTP Verification",
       html: `
 <!DOCTYPE html>
 <html>
-<head><title>AutoHub OTP</title></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px;">
-  <div style="text-align: center;">
-    <h1 style="color: #dc2626;">AutoHub Verification</h1>
-    <div style="font-size: 48px; font-weight: 700; letter-spacing: 8px; background: #dc2626; color: white; padding: 30px; border-radius: 16px; margin: 30px 0; box-shadow: 0 8px 32px rgba(220,38,38,0.3);">
-      ${plainOTP}
-    </div>
-    <p style="color: #6b7280; font-size: 16px; line-height: 1.6;">
-      Valid for <strong>10 minutes only</strong>. Do not share.
-    </p>
-    <hr style="border: none; height: 1px; background: #e5e7eb;">
-    <p style="color: #9ca3af; font-size: 14px;">
-      AutoHub Security Team
-    </p>
+<body style="font-family: Arial; max-width: 500px; margin: 0 auto; padding: 40px;">
+  <h1 style="color: #dc2626;">AutoHub OTP</h1>
+  <div style="font-size: 48px; font-weight: bold; letter-spacing: 12px; background: #dc2626; color: white; padding: 30px; border-radius: 16px; text-align: center;">
+    ${plainOTP}
   </div>
+  <p style="color: #666; margin-top: 20px;">Valid 10 minutes. Don't share.</p>
 </body>
-</html>      
-      `
+</html>`,
     });
 
-    console.log(`✅ INDUSTRY OTP SENT → ${email}`);
-    return { success: true, hashedOTP }; // Return hash for verification
+    console.log(`✅ RESEND LIVE → ${email} ID: ${data.id}`);
+    return { success: true, hashedOTP };
   } catch (error) {
-    console.error(`❌ EMAIL FAIL [${email}]:`, error.message);
+    console.error(`❌ RESEND ERROR [${email}]:`, error.message);
     return { success: false, error: error.message };
   }
 };
 
-// RATE LIMIT: IP + Email (industry security)
-const rateLimit = new Map(); // Simple in-memory (Redis production)
-
+// Rate Limiting
+const rateLimit = new Map();
 const checkRateLimit = (ip, email) => {
   const key = `${ip}:${email}`;
   const now = Date.now();
-  const userData = rateLimit.get(key) || { count: 0, reset: now + 15 * 60 * 1000 };
-  
-  if (now > userData.reset) {
-    userData.count = 0;
-  }
-  
-  if (userData.count >= 5) {
-    return false;
-  }
-  
-  userData.count += 1;
-  rateLimit.set(key, userData);
+  const data = rateLimit.get(key) || { count: 0, reset: now + 15*60*1000 };
+  if (now > data.reset) data.count = 0;
+  if (data.count >= 3) return false;
+  data.count += 1;
+  rateLimit.set(key, data);
   return true;
 };
 
-/* REGISTER - Industry Secure */
+/* REGISTER */
 exports.registerUser = async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
-  const { name, email, password, phone } = req.body;
+  const { name, email, password } = req.body;
 
-  if (!name?.trim() || !email || !password?.length >= 6) {
+  // Input validation
+  if (!name?.trim() || !email || password.length < 6) {
     return res.status(400).json({ message: "Invalid input" });
   }
 
   // Rate limit
   if (!checkRateLimit(ip, email)) {
-    return res.status(429).json({ message: "Too many attempts. Try in 15 min" });
+    return res.status(429).json({ message: "Too many requests" });
   }
 
   try {
     // Cleanup old
     await User.deleteMany({
-      email,
+      email: email.toLowerCase(),
       isVerified: false,
-      otpExpires: { $lt: new Date(Date.now() - 15 * 60 * 1000) }
+      otpExpires: { $lt: new Date(Date.now() - 15*60*1000) }
     });
 
-    if (await User.findOne({ email })) {
-      return res.status(400).json({ message: "Email registered" });
+    // Exists check
+    if (await User.findOne({ email: email.toLowerCase() })) {
+      return res.status(400).json({ message: "Email already registered" });
     }
 
     const otp = generateOTP();
     const hashedOTP = hashOTP(otp);
-    const otpExpires = Date.now() + 10 * 60 * 1000;
+    const otpExpires = Date.now() + 10*60*1000;
 
     const user = new User({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password, // Auto hashed by model
-      phone: phone || "",
-      role: "user",
+      password,
       isVerified: false,
-      otpHash: hashedOTP, // Secure: Hash stored
-      otpExpires,
+      otpHash: hashedOTP,
+      otpExpires: new Date(otpExpires),
       otpAttempts: 0,
-      ipAddress: ip,
+      ipAddress: ip
     });
     await user.save();
 
-    const emailResult = await sendOTPEmail(email, otp);
+    const result = await sendOTPEmail(email, otp);
 
     res.status(201).json({
       message: "Registration successful",
       userId: user._id,
-      emailSent: emailResult.success,
-      otpMode: !emailResult.success ? 'console' : 'email'
+      emailSent: result.success,
+      isDevMode: !result.success
     });
-  } catch (err) {
-    console.error("Register error:", err);
+  } catch (error) {
+    console.error("Register error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-/* VERIFY - Secure Hash Compare */
+/* VERIFY */
 exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
   const ip = req.ip || req.connection.remoteAddress;
@@ -153,114 +121,107 @@ exports.verifyOTP = async (req, res) => {
     return res.status(429).json({ message: "Rate limited" });
   }
 
-  const user = await User.findOne({ email: email.toLowerCase().trim() });
-  if (!user || user.isVerified) {
-    return res.status(400).json({ message: "Invalid session" });
-  }
+  try {
+    const user = await User.findOne({ 
+      email: email.toLowerCase(),
+      isVerified: false 
+    });
 
-  if (Date.now() > user.otpExpires.getTime()) {
-    await user.deleteOne();
-    return res.status(400).json({ message: "OTP expired" });
-  }
-
-  if (hashOTP(otp) !== user.otpHash) {
-    user.otpAttempts += 1;
-    await user.save();
-
-    if (user.otpAttempts >= 3) {
-      await user.deleteOne();
-      return res.status(400).json({ message: "Max attempts exceeded" });
+    if (!user) {
+      return res.status(400).json({ message: "No registration found" });
     }
 
-    return res.status(400).json({ 
-      message: `Invalid OTP (${3 - user.otpAttempts} attempts left)` 
-    });
+    if (Date.now() > user.otpExpires.getTime()) {
+      await user.deleteOne();
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    if (hashOTP(otp) !== user.otpHash) {
+      user.otpAttempts += 1;
+      await user.save();
+
+      if (user.otpAttempts >= 3) {
+        await user.deleteOne();
+        return res.status(400).json({ message: "Too many attempts" });
+      }
+
+      return res.status(400).json({ message: `${3-user.otpAttempts} attempts left` });
+    }
+
+    // Verified
+    user.isVerified = true;
+    user.otpHash = null;
+    user.otpExpires = null;
+    user.otpAttempts = 0;
+    await user.save();
+
+    res.json({ message: "Verified successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Verification failed" });
   }
-
-  // SUCCESS
-  user.isVerified = true;
-  user.otpHash = null;
-  user.otpExpires = null;
-  user.otpAttempts = 0;
-  await user.save();
-
-  console.log(`🎉 SECURE VERIFY: ${user.email}`);
-  res.json({ message: "Email verified successfully" });
 };
 
 /* RESEND */
 exports.resendOTP = async (req, res) => {
-  const ip = req.ip || req.connection.remoteAddress;
   const { email } = req.body;
+  const ip = req.ip || req.connection.remoteAddress;
 
   if (!checkRateLimit(ip, email)) {
     return res.status(429).json({ message: "Rate limited" });
   }
 
-  const user = await User.findOne({ 
-    email: email.toLowerCase().trim(),
-    isVerified: false,
-    otpExpires: { $gt: new Date() }
-  });
+  try {
+    const user = await User.findOne({ 
+      email: email.toLowerCase(),
+      isVerified: false,
+      otpExpires: { $gt: new Date() }
+    });
 
-  if (!user) {
-    return res.status(400).json({ message: "No pending verification" });
+    if (!user) {
+      return res.status(400).json({ message: "No pending OTP" });
   }
 
-  const otp = generateOTP();
-  const hashedOTP = hashOTP(otp);
-  user.otpHash = hashedOTP;
-  user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-  user.otpAttempts = 0;
-  await user.save();
+    const otp = generateOTP();
+    const hashedOTP = hashOTP(otp);
+    user.otpHash = hashedOTP;
+    user.otpExpires = new Date(Date.now() + 10*60*1000);
+    user.otpAttempts = 0;
+    await user.save();
 
-  const result = await sendOTPEmail(email, otp);
-  res.json({ 
-    message: result.success ? "OTP resent" : "Console fallback",
-    sent: result.success
-  });
+    const result = await sendOTPEmail(email, otp);
+    res.json({ message: "OTP resent", success: result.success });
+  } catch (error) {
+    res.status(500).json({ message: "Resend failed" });
+  }
 };
 
 /* LOGIN */
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email: email.toLowerCase().trim() })
-      .select('+password');
-
-    if (!user || !user.isVerified || !(await bcrypt.compare(password, user.password))) {
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    
+    if (!user || !user.isVerified || !await bcrypt.compare(password, user.password)) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.json({ 
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
-    });
-  } catch (err) {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    res.json({ token, user: { name: user.name, email: user.email } });
+  } catch (error) {
     res.status(500).json({ message: "Login error" });
   }
 };
 
 exports.getProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password -otpHash');
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: "Profile error" });
-  }
+  const user = await User.findById(req.user.id).select('-password');
+  res.json(user);
 };
 
 module.exports = {
-  registerUser: exports.registerUser,
-  verifyOTP: exports.verifyOTP,
-  resendOTP: exports.resendOTP,
-  loginUser: exports.loginUser,
-  getProfile: exports.getProfile
+  registerUser,
+  verifyOTP,
+  resendOTP,
+  loginUser,
+  getProfile
 };
 
