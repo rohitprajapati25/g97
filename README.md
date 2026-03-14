@@ -1,32 +1,27 @@
-# G97 AutoHub - OTP Authentication Setup
+# 🚗 G97 AutoHub - Industry Client Documentation Hub
 
-## 🚀 Quick Start
+[![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-green.svg)]()
 
+## 📖 Primary Guides
+
+**For Business Owners/Clients**: [CLIENT_GUIDE.md](CLIENT_GUIDE.md) ← **Complete platform documentation**
+
+**For Developers/DevOps**: [DEVELOPER.md](DEVELOPER.md) ← Deployment & technical setup
+
+## ⚡ Quick Actions (Clients)
 ```bash
-# 1. Backend
-cd backend
-copy sample.env .env
-npm install
-nodemon server.js
+# View full guide
+start CLIENT_GUIDE.md
 
-# 2. Frontend
-cd frontend/admin
-npm install
-npm run dev
+# Update your live site (if Git connected)
+git add .
+git commit -m "updates"
+git push origin main
 
-# 3. Test OTP
-http://localhost:5173/admin/user/register
-→ Console में OTP दिखेगा: "🔑 OTP: 123456"
-→ OTP enter करें → Login success ✓
+# Local preview (developers)
+cd backend && npm start
+cd frontend/admin && npm run dev
 ```
 
-## 📧 Gmail OTP Setup (Production)
-```
-1. Gmail → Google Account → Security → 2-Step ON
-2. App Passwords → "Mail" → Generate 16-char password
-3. .env में:
-   MAIL_USER=your@gmail.com
-   MAIL_PASS=xxxx xxxx xxxx xxxx
-```
-
-## ✅ Working Status: 100% LOCAL READY!
+## 🎉 Next
+Your industry-level documentation is ready! Share CLIENT_GUIDE.md with clients.

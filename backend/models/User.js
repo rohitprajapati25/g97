@@ -16,18 +16,9 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    otpHash: {
-      type: String,
-      default: null,
-    },
-    otpExpires: {
-      type: Date,
-      default: null,
-    },
-    otpAttempts: {
-      type: Number,
-      default: 0,
-    },
+otp: { type: String, default: null },  // Plain OTP per spec
+    otpExpires: { type: Date, default: null },
+    otpAttempts: { type: Number, default: 0 },
     ipAddress: String,
   },
 
