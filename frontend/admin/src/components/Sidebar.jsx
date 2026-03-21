@@ -6,11 +6,12 @@ import {
   CalendarDays, 
   LogOut,
   Settings,
-  UserCircle
+  UserCircle,
+  X
 } from "lucide-react";
 import logo from "../assets/logo.png";
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -18,104 +19,118 @@ function Sidebar() {
     if (window.confirm("Confirm Logout from Auto Hub Admin?")) {
       localStorage.removeItem("adminToken");
       navigate("/");
+      onClose?.();
     }
   };
 
   const isActive = (path) => location.pathname === path;
 
   const menuItems = [
-    { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
-    { name: "Services", path: "/admin/services", icon: <Wrench size={18} /> },
-    { name: "Products", path: "/admin/products", icon: <Package size={18} /> },
-    { name: "Bookings", path: "/bookings", icon: <CalendarDays size={18} /> },
+    { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={20} /> },
+    { name: "Services", path: "/admin/services", icon: <Wrench size={20} /> },
+    { name: "Products", path: "/admin/products", icon: <Package size={20} /> },
+    { name: "Bookings", path: "/bookings", icon: <CalendarDays size={20} /> },
   ];
 
   return (
-    <aside className="w-72 bg-darkbg text-white min-h-screen p-6 flex flex-col border-r border-white/5 shadow-2xl relative z-50">
-      
-      {/* 🏎️ BRAND LOGO SECTION */}
-      <div className="flex flex-col items-center mb-10 px-2 mt-4">
-        <div className="relative group cursor-pointer" onClick={() => navigate("/dashboard")}>
-          {/* Logo Glow Effect */}
-          <div className="absolute -inset-4 bg-red-600/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition duration-700"></div>
-          
-          <img 
-            src={logo} 
-            alt="Auto Hub Logo" 
-            className="relative h-14 w-auto object-contain transform transition duration-500 group-hover:scale-105" 
-          />
-        </div>
+    <>
+      {/* 🌑 OVERLAY (Mobile only) */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          onClick={onClose}
+        />
+      )}
+
+      {/* 🏁 SIDEBAR */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-zinc-950 text-white transform transition-transform duration-300 ease-in-out flex flex-col border-r border-white/5 shadow-2xl
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
+      `}>
         
-        <div className="mt-4 text-center">
-          <div className="flex items-center gap-2 justify-center">
+        {/* MOBILE CLOSE HEADER */}
+        <div className="flex items-center justify-between p-4 lg:hidden">
+          <span className="text-xs sm:text-sm font-bold tracking-widest text-red-500 uppercase">Menu</span>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* 🏎️ BRAND LOGO SECTION */}
+        <div className="flex flex-col items-center py-8 px-6">
+          <div className="relative group cursor-pointer" onClick={() => navigate("/dashboard")}>
+            <div className="absolute -inset-4 bg-red-600/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition duration-700"></div>
+            <img 
+              src={logo} 
+              alt="Auto Hub Logo" 
+              className="relative h-12 w-auto object-contain transform transition duration-500 group-hover:scale-105" 
+            />
+          </div>
+          <div className="mt-4 flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse"></span>
-            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Admin Control</p>
+            <p className="text-xs sm:text-sm font-black text-zinc-500 uppercase tracking-[0.3em]">Admin Control</p>
           </div>
         </div>
-      </div>
 
-      {/* 🧭 NAVIGATION LINKS */}
-      <nav className="flex-1 space-y-2">
-        <p className="px-4 text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-4">Main Menu</p>
-        
-        {menuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group relative ${
-              isActive(item.path)
-                ? "bg-gradient-to-r from-red-600/20 to-transparent text-white border-l-2 border-red-600"
-                : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-            }`}
-          >
-            <span className={`${isActive(item.path) ? "text-red-500" : "text-zinc-600 group-hover:text-red-500"} transition-colors duration-300`}>
-              {item.icon}
-            </span>
-            <span className={`font-bold uppercase tracking-widest text-[10px] ${isActive(item.path) ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`}>
-              {item.name}
-            </span>
+        {/* 🧭 NAVIGATION LINKS */}
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto mt-4">
+          {menuItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => onClose?.()}
+              className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 group
+                ${isActive(item.path)
+                  ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                  : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                }`}
+            >
+              <div className={`${isActive(item.path) ? "text-white" : "group-hover:text-red-500"} transition-colors`}>
+                {item.icon}
+              </div>
+              <span className="font-semibold text-sm md:text-base tracking-wide">{item.name}</span>
+            </Link>
+          ))}
+        </nav>
 
-            {/* Active Glow */}
-            {isActive(item.path) && (
-              <div className="absolute inset-0 bg-red-600/5 blur-xl -z-10"></div>
-            )}
-          </Link>
-        ))}
-      </nav>
-
-      {/* ⚙️ BOTTOM SECTION */}
-      <div className="mt-auto space-y-2 pt-6 border-t border-white/5">
-        <div className="px-4 py-3 flex items-center gap-3 mb-4 rounded-xl bg-zinc-900/50 border border-white/5">
-            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 text-red-500">
-                <UserCircle size={20} />
+        {/* ⚙️ BOTTOM SECTION */}
+        <div className="p-4 border-t border-white/5 space-y-3 bg-zinc-950/50">
+          {/* User Profile */}
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+            <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 text-red-500">
+              <UserCircle size={24} />
             </div>
-            <div className="overflow-hidden">
-                <p className="text-[10px] font-black text-white truncate uppercase tracking-tighter">Super Admin</p>
-                <p className="text-[8px] font-medium text-zinc-500 truncate lowercase">admin@autohub.com</p>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-white truncate uppercase">Super Admin</p>
+              <p className="text-[10px] text-zinc-500 truncate">admin@autohub.com</p>
             </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-2">
+            {/* Settings Button */}
+            <Link 
+              to="/admin/settings"
+              onClick={() => onClose?.()}
+              className={`col-span-2 flex items-center justify-center p-3 rounded-xl transition-all border border-white/5
+                ${isActive("/admin/settings") 
+                  ? "bg-red-600 text-white" 
+                  : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                }`}
+            >
+              <Settings size={20} />
+            </Link>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="col-span-3 flex items-center justify-center gap-2 p-3 rounded-xl bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white transition-all group"
+            >
+              <LogOut size={20} />
+              <span className="text-xs font-bold uppercase">Exit</span>
+            </button>
+          </div>
         </div>
-
-        <Link 
-          to="/admin/settings"
-          className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest group ${
-            isActive("/admin/settings") 
-              ? "bg-gradient-to-r from-red-600/20 to-transparent text-white" 
-              : "text-zinc-500 hover:text-white"
-          }`}
-        >
-           <Settings size={16} className={`group-hover:rotate-45 transition-transform duration-500 ${isActive("/admin/settings") ? "text-red-500" : ""}`} />
-           <span>Settings</span>
-        </Link>
-
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-4 w-full px-4 py-4 rounded-xl text-red-500/70 hover:bg-red-600 hover:text-white transition-all duration-300 group shadow-lg"
-        >
-          <LogOut size={16} />
-          <span className="font-black uppercase tracking-widest text-[10px]">Logout System</span>
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

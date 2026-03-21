@@ -86,17 +86,17 @@ function UserBookings() {
                   }`}></div>
 
                   <div className="flex-1 p-6 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-5">
-                      <div className="bg-slate-50 p-4 rounded-2xl text-2xl group-hover:bg-red-50 group-hover:rotate-6 transition-all">
-                        🚗
+                      <div className="flex items-center gap-5">
+                        <div className="bg-slate-50 p-4 rounded-2xl text-2xl group-hover:bg-red-50 group-hover:rotate-6 transition-all">
+                          <img src={b.serviceImage || 'https://images.unsplash.com/photo-1558618047-3c8c76dfd330?w=100&h=100&fit=crop&crop=center'} alt={b.service || 'Service'} className="w-12 h-12 object-cover rounded-lg" />
+                        </div>
+                        <div>
+                          <h3 className="font-black text-lg text-slate-900 uppercase italic leading-none mb-1">
+                            {b.service}
+                          </h3>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{b.carType} • {b.date}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-black text-lg text-slate-900 uppercase italic leading-none mb-1">
-                          {b.service}
-                        </h3>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{b.carType} • {b.date}</p>
-                      </div>
-                    </div>
 
                     <div className="flex items-center gap-4">
                       <div className="hidden sm:block">

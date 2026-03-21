@@ -1,244 +1,236 @@
 const Booking = require("../models/Booking");
 const User = require("../models/User");
+const Service = require("../models/Service");
+const { generateAvailableSlots } = require('../utils/slots');
 
-// Helper function to convert 12-hour time to 24-hour format for storage
-const convertTo24Hour = (time12h) => {
-  if (!time12h) return time12h;
-  
-  // If already in 24-hour format, return as-is
-  if (time12h.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-    return time12h;
-  }
-  
-  const [time, modifier] = time12h.split(/(?=[AP]M)/i);
-  let [hours, minutes] = time.split(':');
-  
-  if (hours === '12') {
-    hours = '00';
-  }
-  
-  if (modifier.toUpperCase() === 'PM') {
-    hours = parseInt(hours, 10) + 12;
-  }
-  
-  return `${hours}:${minutes}`;
+// Define ALL functions first as local consts (hoisted)
+
+const parseDuration = (durationStr) => {
+  const match = durationStr.match(/(\\d+)\\s*(hrs?|hours?|min|minutes?)/i);
+  if (!match) return 60;
+  const [, num, unit] = match;
+  return parseInt(num) * (unit.toLowerCase().includes('hr') ? 60 : 1);
 };
 
-// Helper function to convert 24-hour time to 12-hour format for display
-const convertTo12Hour = (time24) => {
-  if (!time24) return time24;
-  
-  const [hours, minutes] = time24.split(':');
-  const h = parseInt(hours, 10);
-  
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const hour12 = h % 12 || 12;
-  
-  return `${hour12}:${minutes} ${ampm}`;
+const parseTime = (timeStr) => {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
 };
 
-// ➕ Create Booking (User)
-exports.createBooking = async (req, res) => {
+const addMinutes = (minutes, add) => minutes + add;
+
+const formatTime = (totalMin) => {
+  const h = Math.floor(totalMin / 60).toString().padStart(2, '0');
+  const m = (totalMin % 60).toString().padStart(2, '0');
+  return `${h}:${m}`;
+};
+
+const getAvailableSlots = async (req, res) => {
   try {
-    const { date, time, service, carType } = req.body;
-
-    // Get user details from the logged-in user
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    const { service_id } = req.params;
+    const { date } = req.query;
+    if (!service_id || !date) {
+      return res.status(400).json({ slots: [] });
     }
-
-    // Validate required fields
-    if (!date || !time || !service || !carType) {
-      return res.status(400).json({ message: "All fields are required" });
+    const service = await Service.findById(service_id).lean();
+    if (!service) {
+      return res.status(404).json({ slots: [] });
     }
+    const slots = await generateAvailableSlots(service, date);
+    res.json({ slots });
+  } catch (error) {
+    console.error('getAvailableSlots error:', error);
+    res.status(500).json({ slots: [] });
+  }
+};
 
-    // Validate date: must be today or future
-    const bookingDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of today
-    if (bookingDate < today) {
-      return res.status(400).json({ message: "Booking date cannot be in the past" });
-    }
-
-    // Validate and convert time: must be between 9 AM and 6 PM
-    const time24 = convertTo24Hour(time);
-    const [hours, minutes] = time24.split(':').map(Number);
-    const bookingTime = hours * 60 + minutes; // Convert to minutes
-    const startTime = 9 * 60; // 9 AM
-    const endTime = 18 * 60; // 6 PM
-    if (bookingTime < startTime || bookingTime > endTime) {
-      return res.status(400).json({ message: "Booking time must be between 9 AM and 6 PM" });
-    }
-
-    // Check for duplicate booking: same user, same date, same time
-    const existingBooking = await Booking.findOne({
-      user: req.user.id,
-      date: date,
-      time: time24,
-    });
-    if (existingBooking) {
-      return res.status(400).json({ message: "You already have a booking at this date and time" });
-    }
-
-    // Create booking with user details from profile
-    const booking = await Booking.create({
-      date: date,
-      time: time24,
-      service: service,
-      carType: carType,
-      userName: user.name, // Get name from user profile
-      phone: user.phone || "Not Provided", // Get phone from user profile
-      user: req.user.id, // Link to logged in user
+const checkSlot = async (req, res) => {
+  try {
+    const { service, date, startTime } = req.query;
+    if (!service || !date || !startTime) return res.status(400).json({ available: false });
+    
+    const serviceDoc = await Service.findOne({ title: service });
+    if (!serviceDoc) return res.status(400).json({ available: false });
+    
+    const durationMin = parseDuration(serviceDoc.duration);
+    const endTimeMin = addMinutes(parseTime(startTime), durationMin);
+    
+    if (endTimeMin > parseTime('18:00')) return res.json({ available: false });
+    
+    // Check overlapping bookings
+    const bookings = await Booking.find({
+      date,
+      status: { $ne: 'Cancelled' }
+    }).sort({ 'time': 1 });
+    
+    const startMin = parseTime(startTime);
+    const endMin = endTimeMin;
+    
+    const overlap = bookings.some(b => {
+      const bStart = parseTime(b.time);
+      const bDuration = parseDuration(b.duration || '1 hr'); // Default if not stored
+      const bEnd = addMinutes(bStart, bDuration);
+      return startMin < bEnd && endMin > bStart;
     });
     
+    res.json({ available: !overlap });
+  } catch {
+    res.status(500).json({ available: false });
+  }
+};
+
+
+
+const createBooking = async (req, res) => {
+  try {
+    const { date, time, service, carType, phone } = req.body;
+
+    if (!date || !time || !service || !carType || !phone) return res.status(400).json({ message: "All fields required: date, time, service, carType, phone" });
+
+    const time24 = time; // Assume already 24h from frontend
+
+    let user = null;
+    let userName = 'Anonymous';
+    let userEmail = '';
+    if (req.user && req.user.id) {
+      user = await User.findById(req.user.id).select('name email phone');
+      if (user) {
+        userName = user.name;
+        userEmail = user.email;
+      }
+    }
+
+    // Get service image
+    const serviceDoc = await Service.findOne({ title: service });
+    if (!serviceDoc) return res.status(400).json({ message: 'Service not found' });
+    const serviceImage = serviceDoc.image;
+    
+    const durationMin = parseDuration(serviceDoc.duration);
+    const slotEndMin = parseTime(time24) + durationMin;
+    const slot_end = formatTime(slotEndMin);
+
+    // Capacity check
+    const bookedCount = await Booking.countDocuments({
+      service_id: serviceDoc._id,
+      date,
+      time: time24
+    });
+    if (bookedCount >= serviceDoc.max_bookings_per_slot) {
+      return res.status(400).json({ 
+        message: `Slot full (${bookedCount}/${serviceDoc.max_bookings_per_slot} booked)` 
+      });
+    }
+
+    const booking = await Booking.create({
+      date, time: time24, service, carType, serviceImage, slot_end,
+      service_id: serviceDoc._id,
+      userName, userEmail, phone, user: user ? user._id : null
+    });
+
     res.status(201).json(booking);
   } catch (error) {
+    console.error('Booking error:', error);
     res.status(400).json({ message: error.message });
   }
 };
 
-// 📥 Get My Bookings (User)
-exports.getUserBookings = async (req, res) => {
+const getUserBookings = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
-    const [total, bookings] = await Promise.all([
-      Booking.countDocuments({ user: req.user.id }),
-      Booking.find({ user: req.user.id })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-    ]);
-
-    res.json({ total, page, limit, bookings });
+    const bookings = await Booking.find({ user: req.user.id }).sort({ createdAt: -1 });
+    res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// 📥 Get All Bookings (Admin) - with search/filter
-exports.getBookings = async (req, res) => {
+const getBookings = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
-
-    // Build filter query
-    const filter = {};
+    const { page = 1, limit = 20, search, status, dateFrom, dateTo, service } = req.query;
+    const query = {};
     
-    // Search by user name or phone
-    if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search, 'i');
-      filter.$or = [
-        { userName: searchRegex },
-        { phone: searchRegex },
-        { service: searchRegex }
+    if (status) query.status = status;
+    if (service) {
+      query.$or = [
+        { service: { $regex: service, $options: 'i' } },
+        { service_id: service }
+      ];
+    }
+    if (dateFrom) {
+      query.date = query.date || {};
+      query.date.$gte = dateFrom;
+    }
+    if (dateTo) {
+      query.date = query.date || {};
+      query.date.$lte = dateTo;
+    }
+    if (search) {
+      query.$or = [
+        { userName: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { service: { $regex: search, $options: 'i' } }
       ];
     }
     
-    // Filter by status
-    if (req.query.status && req.query.status !== 'all') {
-      filter.status = req.query.status;
-    }
+    const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    // Filter by date range
-    if (req.query.startDate && req.query.endDate) {
-      filter.date = {
-        $gte: req.query.startDate,
-        $lte: req.query.endDate
-      };
-    } else if (req.query.date) {
-      filter.date = req.query.date;
-    }
-
-    const [total, bookings] = await Promise.all([
-      Booking.countDocuments(filter),
-      Booking.find(filter)
-        .populate("user", "name email")
+    const [bookings, total] = await Promise.all([
+      Booking.find(query)
+        .populate('user', 'name email phone')
+        .populate('service_id', 'title duration')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
+        .limit(parseInt(limit))
         .lean(),
+      Booking.countDocuments(query)
     ]);
 
-    // Add user email from populated user profile
-    const formattedBookings = bookings.map(booking => ({
-      ...booking,
-      userEmail: booking.user?.email || "N/A"
-    }));
-
-    res.json({ total, page, limit, bookings: formattedBookings });
+    res.json({
+      bookings,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) }
+    });
   } catch (error) {
+    console.error('getBookings error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// ✏️ Edit Booking (Admin)
-exports.editBooking = async (req, res) => {
+
+const updateBookingStatus = async (req, res) => {
   try {
-    const { date, time, service, carType, userName, phone, status } = req.body;
-    
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    // Update fields if provided
-    if (date) booking.date = date;
-    if (time) booking.time = time;
-    if (service) booking.service = service;
-    if (carType) booking.carType = carType;
-    if (userName) booking.userName = userName;
-    if (phone) booking.phone = phone;
-    if (status) booking.status = status;
-
-    await booking.save();
-    
-    res.json({ message: "Booking updated successfully", booking });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
-// 🔄 Update Booking Status (Admin)
-exports.updateBookingStatus = async (req, res) => {
-  try {
-    const booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { status: req.body.status },
-      { new: true }
-    );
-
+    const booking = await Booking.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
     res.json(booking);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// ❌ DELETE/CANCEL BOOKING (User or Admin)
-exports.deleteBooking = async (req, res) => {
+const deleteBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
-
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    // Check if user is either the booking owner or an admin
-    // Note: For user deletions, we need to check user ownership
-    // For admin, they can delete any booking
-    if (req.user && req.user.role === "user" && booking.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to delete this booking" });
-    }
-
-    await booking.deleteOne();
-    res.json({ message: "Booking deleted successfully" });
+    await Booking.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+const editBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(booking);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Export for destructuring
+module.exports = {
+  getAvailableSlots,
+  checkSlot,
+  createBooking,
+  getBookings,
+  getUserBookings,
+  updateBookingStatus,
+  deleteBooking,
+  editBooking
 };
 

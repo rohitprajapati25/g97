@@ -6,10 +6,12 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
     phone: {
       type: String,
       required: true,
     },
+
     service: {
       type: String,
       required: true,
@@ -27,23 +29,48 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    slot_end: {
+      type: String
+    },
+    service_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Service'
+    },
+
     status: {
       type: String,
+      enum: ['Pending', 'Confirmed', 'Completed', 'Cancelled'],
       default: "Pending",
+    },
+    payment_status: {
+      type: String,
+      enum: ['Pending', 'Paid', 'Refunded'],
+      default: 'Pending'
+    },
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+
+    serviceImage: {
+      type: String,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+      ref: "User"
     },
 
   },
   { timestamps: true }
 );
 
-// compound unique index to prevent duplicate slots for same user
-bookingSchema.index({ user: 1, date: 1, time: 1 }, { unique: true });
-// index on date/time for efficient sorting/filtering
-bookingSchema.index({ date: 1, time: 1 });
+// Industry slot locking: 1 booking per service_id+date+time (regardless of user)
+bookingSchema.index({ service_id: 1, date: 1, time: 1 }, { unique: true });
+bookingSchema.index({ service: 1 }); // For title queries
+// Per-user duplicate prevention
+bookingSchema.index({ user: 1, date: 1, time: 1 });
+bookingSchema.index({ date: 1, time: 1, service: 1 });
 
 module.exports = mongoose.model("Booking", bookingSchema);
+

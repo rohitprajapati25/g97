@@ -74,28 +74,28 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-8 bg-darkbg min-h-screen text-white">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 bg-darkbg min-h-screen text-white">
+      <div className="max-w-4xl sm:max-w-6xl lg:max-w-7xl mx-auto">
         
         {/* HEADER SECTION */}
-        <div className="mb-12 flex items-end justify-between">
+        <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-6 sm:gap-0">
           <div>
             <div className="flex items-center gap-2 mb-2">
                 <span className="h-2 w-2 rounded-full bg-red-600"></span>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Real-time Analytics</p>
+          <p className="text-zinc-500 text-xs sm:text-sm font-black uppercase tracking-widest">Real-time Analytics</p>
             </div>
-            <h2 className="text-5xl font-black uppercase italic tracking-tighter">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black uppercase italic tracking-tighter">
               Studio <span className="text-red-600">Overview</span>
             </h2>
           </div>
-          <div className="hidden md:block text-right">
+          <div className="text-center sm:text-right">
              <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Auto Hub Detailing Studio</p>
              <p className="text-zinc-400 text-sm font-black italic">v2.0.4 Admin</p>
           </div>
         </div>
 
         {/* STATS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           
           {/* SERVICES CARD */}
           <StatCard 
@@ -127,51 +127,49 @@ export default function Dashboard() {
         </div>
 
         {/* RECENT ACTIVITY SECTION */}
-        <div className="mt-12 p-8 rounded-[2.5rem] bg-zinc-900/30 border border-white/5 backdrop-blur-md">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-black uppercase italic tracking-tight">Recent Detailing Orders</h3>
-                <button className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition">View All Orders</button>
+        <div className="mt-8 sm:mt-12 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] bg-zinc-900/30 border border-white/5 backdrop-blur-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-4 sm:gap-0">
+            <h3 className="text-lg md:text-xl lg:text-2xl font-black uppercase italic tracking-tight">Recent Detailing Orders</h3>
+                <button className="text-[10px] sm:text-sm font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition">View All Orders</button>
             </div>
             
             {data?.recentBookings && data.recentBookings.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {data.recentBookings.map((booking) => (
-                  <div key={booking._id} className="flex items-center justify-between p-4 bg-zinc-950/50 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-red-600/10 rounded-xl">
-                        <Car size={20} className="text-red-500" />
+                  <div key={booking._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-zinc-950/50 rounded-xl sm:rounded-2xl border border-white/5 hover:border-white/10 transition-all gap-4 sm:gap-0">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="p-2 sm:p-3 bg-red-600/10 rounded-lg sm:rounded-xl flex-shrink-0">
+                        <Car size={18} sm:size={20} className="text-red-500" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <User size={14} className="text-zinc-500" />
-                          <span className="text-white font-bold text-sm">{booking.userName}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <User size={14} className="text-zinc-500 flex-shrink-0" />
+                          <span className="text-white font-bold text-sm truncate">{booking.userName}</span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Phone size={12} className="text-zinc-600" />
-                          <span className="text-zinc-500 text-xs">{booking.phone}</span>
+                        <div className="flex items-center gap-2">
+                          <Phone size={12} className="text-zinc-600 flex-shrink-0" />
+                          <span className="text-zinc-500 text-xs truncate">{booking.phone}</span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="hidden md:flex items-center gap-6">
-                      <div className="text-center">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 w-full sm:w-auto">
+                      <div className="w-full sm:w-auto text-left sm:text-center">
                         <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Service</p>
-                        <p className="text-white text-sm font-bold">{booking.service}</p>
+                        <p className="text-white text-sm font-bold truncate">{booking.service}</p>
                       </div>
-                      <div className="text-center">
+                      <div className="w-full sm:w-auto text-left sm:text-center">
                         <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Car Type</p>
-                        <p className="text-white text-sm font-bold">{booking.carType}</p>
+                        <p className="text-white text-sm font-bold truncate">{booking.carType}</p>
                       </div>
-                      <div className="text-center">
+                      <div className="w-full sm:w-auto text-left sm:text-center flex items-center gap-1">
                         <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Date</p>
                         <p className="text-white text-sm font-bold">{booking.date}</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Time</p>
-                        <div className="flex items-center gap-1 justify-center">
-                          <Clock size={12} className="text-zinc-500" />
-                          <p className="text-white text-sm font-bold">{booking.time}</p>
-                        </div>
+                      <div className="w-full sm:w-auto text-left sm:text-center flex items-center gap-1">
+                        <Clock size={12} className="text-zinc-500 flex-shrink-0" />
+                        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest hidden sm:inline">Time</p>
+                        <p className="text-white text-sm font-bold">{booking.time}</p>
                       </div>
                     </div>
 

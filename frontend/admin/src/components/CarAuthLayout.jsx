@@ -15,20 +15,20 @@ const CarAuthLayout = ({ children }) => {
       <div className="absolute inset-0 bg-black/60"></div>
 
       {/* Auth Card */}
-      <div className="relative z-10 w-full max-w-md bg-white/95 
-        backdrop-blur-lg rounded-2xl shadow-2xl p-8">
+      <div className="relative z-10 w-full max-w-sm sm:max-w-md mx-4 sm:mx-auto bg-white/95 
+        backdrop-blur-lg rounded-2xl shadow-2xl p-6 sm:p-8">
 
         {/* Logo  */}
          <div className="flex justify-center ">
                    <img
                      src={logo}
                      alt="G97 Logo"
-                     className="h-[120px] object-contain"
+                     className="h-24 sm:h-[120px] object-contain"
                    />
         </div>
      
 
-        <p className="text-center text-gray-500 mb-6">
+        <p className="text-center text-gray-500 mb-6 text-xs sm:text-sm md:text-base">
           Book | Buy 
         </p>
 

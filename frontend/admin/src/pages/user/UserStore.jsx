@@ -187,14 +187,14 @@ function UserStore() {
       )}
 
       {/* --- HERO SECTION --- */}
-      <section className="bg-slate-950 pt-40 pb-24 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full -mr-48 -mt-48" />
-        <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
+      <section className="bg-slate-950 pt-24 sm:pt-32 lg:pt-40 pb-16 sm:pb-24 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-red-600/10 blur-[120px] rounded-full -mr-32 sm:-mr-48 -mt-32 sm:-mt-48" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center relative z-10">
           <div className="flex items-center justify-center gap-2 mb-6 text-red-600 font-black uppercase tracking-[0.4em] text-[10px]">
             <Zap size={14} fill="currentColor" />
             <span>Authorized Gear Shop</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter uppercase italic leading-none">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter uppercase italic leading-none">
             Pro <span className="text-red-600">Car Care</span> Store
           </h1>
           <p className="text-gray-500 max-w-xl mx-auto text-xs font-bold uppercase tracking-[0.2em] leading-relaxed">
@@ -215,10 +215,10 @@ function UserStore() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
               {products.map((p) => (
                 <div key={p._id} className="group bg-white rounded-[2.5rem] p-5 border border-gray-100 hover:shadow-2xl transition-all duration-500 relative flex flex-col">
-                  <div className="relative h-60 bg-[#f9f9f9] rounded-[2rem] overflow-hidden mb-6 flex items-center justify-center">
+                  <div className="relative h-48 sm:h-60 bg-[#f9f9f9] rounded-[2rem] overflow-hidden mb-6 flex items-center justify-center">
                     <img 
                       src={p.image} 
-                      className="h-full w-full object-contain p-8 transition-transform duration-700 group-hover:scale-110" 
+                      className="h-full w-full object-contain p-4 sm:p-8 transition-transform duration-700 group-hover:scale-110" 
                       alt={p.name}
                     />
                   </div>

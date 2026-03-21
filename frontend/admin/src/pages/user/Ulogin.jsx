@@ -20,9 +20,13 @@ const Login = () => {
 
     try {
       setLoading(true);
+
       const res = await api.post("/user/login", { email, password });
+      localStorage.setItem('userPhone', res.data.user.phone);
+
       if (res.data.token) {
         localStorage.setItem("userToken", res.data.token);
+        localStorage.setItem("userData", JSON.stringify(res.data.user));
         localStorage.setItem("userName", res.data.user.name);
         localStorage.setItem("userEmail", res.data.user.email);
         navigate("/", { replace: true });

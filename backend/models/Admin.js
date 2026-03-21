@@ -18,8 +18,7 @@ const adminSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  otpCode: String,
-  otpExpires: Date,
+
   twoFactorEnabled: {
     type: Boolean,
     default: false,

@@ -6,19 +6,13 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    phone: { type: String, default: "" },
+
+    phone: { type: String, required: true },
+
     role: {
       type: String,
       default: "user",
     },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-
-otp: { type: String, default: null },  // Plain OTP per spec
-    otpExpires: { type: Date, default: null },
-    otpAttempts: { type: Number, default: 0 },
     ipAddress: String,
   },
 

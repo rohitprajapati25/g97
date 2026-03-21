@@ -8,6 +8,8 @@ const {
   updateBookingStatus,
   deleteBooking,
   editBooking,
+  checkSlot,
+  getAvailableSlots
 } = require("../controllers/bookingController");
 
 const { protectAdmin } = require("../middleware/authMiddleware");
@@ -15,6 +17,8 @@ const userAuth = require("../middleware/userAuth");
 
 // User booking routes
 router.post("/", userAuth, createBooking);
+router.get("/check-slot", userAuth, checkSlot);
+router.get("/:service_id/slots", userAuth, getAvailableSlots);
 router.get("/my", userAuth, getUserBookings);
 router.delete("/:id", userAuth, deleteBooking);
 
@@ -25,4 +29,3 @@ router.put("/edit/:id", protectAdmin, editBooking);
 router.delete("/admin/:id", protectAdmin, deleteBooking);
 
 module.exports = router;
-

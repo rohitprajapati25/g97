@@ -18,6 +18,22 @@ const serviceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    start_time: {
+      type: String,
+      default: '09:00'
+    },
+    end_time: {
+      type: String,
+      default: '18:00'
+    },
+    slot_interval: {
+      type: Number,
+      default: 30
+    },
+    max_bookings_per_slot: {
+      type: Number,
+      default: 1
+    },
     image: {
       type: String, // Cloudinary URL
     },

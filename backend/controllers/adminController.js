@@ -2,39 +2,14 @@ const Admin = require("../models/Admin");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
-const nodemailer = require("nodemailer");
+
 
 // mailer setup (use Gmail SMTP)
 // Email transporter setup - Configure properly for production
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // TLS use karne ke liye false rakhein
-    auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false // Yeh line live server par certificate block hone se rokegi
-    }
-  });
-};
+
 
 // Check if email is properly configured
-const isEmailConfigured = () => {
-  const mailUser = process.env.MAIL_USER;
-  const mailPass = process.env.MAIL_PASS;
-  
-  // Strict validation for production
-  return mailUser && 
-         mailUser.includes('@') &&
-         mailPass && 
-         mailPass.length > 10 &&
-         !mailPass.includes('your-') &&
-         !mailPass.includes('xxxx');
-};
+
 
 
 
@@ -64,12 +39,13 @@ exports.registerAdmin = async (req, res) => {
   }
 };
 
-// ====== admin helpers ======
+// ====== admin helpers ====== 
 exports.getProfile = async (req, res) => {
   const admin = await Admin.findById(req.admin.id).select("-password");
   if (!admin) return res.sendStatus(404);
   res.json(admin);
 };
+
 
 // ====== update admin profile ======
 exports.updateProfile = async (req, res) => {

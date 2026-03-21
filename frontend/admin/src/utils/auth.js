@@ -53,14 +53,21 @@ export const checkTokenExpiry = () => {
       // Decode JWT to check expiry (client-side)
       const payload = JSON.parse(atob((userToken || adminToken).split('.')[1]));
       if (payload.exp * 1000 < Date.now()) {
-        localStorage.clear();
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userEmail');
         return false;
       }
     } catch {
-      localStorage.clear();
+      localStorage.removeItem('userToken');
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
       return false;
     }
   }
   return true;
 };
+
 
