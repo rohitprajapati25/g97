@@ -49,6 +49,10 @@ exports.createService = async (req, res) => {
       description: req.body.description,
       price: req.body.price,
       duration: req.body.duration,
+      start_time: req.body.start_time || '09:30',
+      end_time: req.body.end_time || '19:00',
+      slot_interval: req.body.slot_interval ? parseInt(req.body.slot_interval) : 30,
+      max_bookings_per_slot: req.body.max_bookings_per_slot ? parseInt(req.body.max_bookings_per_slot) : 1,
       image: uploadResult.secure_url, // ✅ Cloudinary URL
       isActive: true,
     });
@@ -97,8 +101,12 @@ exports.getServices = async (req, res) => {
 // ✏️ UPDATE SERVICE
 exports.updateService = async (req, res) => {
   try {
-    const { title, description, price, duration } = req.body;
+    const { title, description, price, duration, start_time, end_time, slot_interval, max_bookings_per_slot } = req.body;
     let updateData = { title, description, price, duration };
+    if (start_time) updateData.start_time = start_time;
+    if (end_time) updateData.end_time = end_time;
+    if (slot_interval) updateData.slot_interval = parseInt(slot_interval);
+    if (max_bookings_per_slot) updateData.max_bookings_per_slot = parseInt(max_bookings_per_slot);
 
     const existingService = await Service.findById(req.params.id);
     if (!existingService) {
@@ -107,6 +115,10 @@ exports.updateService = async (req, res) => {
 
     // Handle image update
     if (req.file && req.file.buffer) {
+      // Delete old image from Cloudinary first
+      if (existingService.image) {
+        await deleteCloudinaryImage(existingService.image, "services");
+      }
       const uploadResult = await cloudinary.uploader.upload(
         `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
         { folder: "services" }
@@ -119,6 +131,9 @@ exports.updateService = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
+
+    // Clear services cache after update
+    cache.flushAll();
 
     res.status(200).json({ success: true, service: updatedService });
   } catch (error) {

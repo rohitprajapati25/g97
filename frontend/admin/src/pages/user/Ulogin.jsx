@@ -1,14 +1,20 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import CarAuthLayout from "../../components/CarAuthLayout";
 import api from "../../api/axios";
+import { useToast } from "../../context/ToastContext";
 
-const Login = () => {
+const Ulogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Redirect to where user came from, or home
+  const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,21 +26,23 @@ const Login = () => {
 
     try {
       setLoading(true);
-
       const res = await api.post("/user/login", { email, password });
-      localStorage.setItem('userPhone', res.data.user.phone);
 
       if (res.data.token) {
         localStorage.setItem("userToken", res.data.token);
         localStorage.setItem("userData", JSON.stringify(res.data.user));
         localStorage.setItem("userName", res.data.user.name);
         localStorage.setItem("userEmail", res.data.user.email);
-        navigate("/", { replace: true });
+        localStorage.setItem("userPhone", res.data.user.phone || "");
+
+        toast('success', `Welcome, ${res.data.user.name}!`, 'Login successful');
+        setTimeout(() => navigate(from, { replace: true }), 800);
       } else {
-        setError("Login failed - no token received");
+        setError("Login failed — no token received");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      const msg = err.response?.data?.message || "Login failed";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -51,7 +59,7 @@ const Login = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 text-xs p-4 rounded-2xl mb-6 border border-red-100 flex items-center gap-2">
+          <div className="bg-red-50 text-red-600 text-xs p-4 rounded-2xl mb-6 border border-red-100 flex items-center gap-2 font-bold">
             <span>⚠️</span> {error}
           </div>
         )}
@@ -88,9 +96,11 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slate-900 hover:bg-red-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200 hover:shadow-red-600/20 disabled:opacity-50 mt-4"
+            className="w-full bg-slate-900 hover:bg-red-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200 hover:shadow-red-600/20 disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
           >
-            {loading ? "Authenticating..." : "Login to Account"}
+            {loading ? (
+              <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Authenticating...</>
+            ) : "Login to Account"}
           </button>
         </form>
 
@@ -107,4 +117,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Ulogin;

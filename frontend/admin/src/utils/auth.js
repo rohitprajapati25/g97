@@ -1,6 +1,39 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
+// Check if a specific token is valid and not expired
+export const checkTokenExpiry = (tokenKey = 'userToken') => {
+  const token = localStorage.getItem(tokenKey);
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem(tokenKey);
+      return false;
+    }
+    return true;
+  } catch {
+    localStorage.removeItem(tokenKey);
+    return false;
+  }
+};
+
+// Clear all user session data
+export const clearUserSession = () => {
+  localStorage.removeItem('userToken');
+  localStorage.removeItem('userData');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('userPhone');
+};
+
+// Clear admin session data only
+export const clearAdminSession = () => {
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('admin');
+};
+
+// Auto logout on inactivity (5 min) - only for user protected pages
 export const useAutoLogout = () => {
   const navigate = useNavigate();
 
@@ -10,64 +43,21 @@ export const useAutoLogout = () => {
     const resetTimer = () => {
       clearTimeout(activityTimer);
       activityTimer = setTimeout(() => {
-        // Auto logout after 5 minutes inactivity
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
+        clearUserSession();
         navigate('/user/login', { replace: true });
-        alert('Session expired. Please login again.');
-      }, 5 * 60 * 1000); // 5 minutes
+        if (window.toast) {
+          window.toast('warning', 'Session Expired', 'Please login again');
+        }
+      }, 30 * 60 * 1000); // 30 minutes inactivity
     };
 
-    const handleActivity = () => {
-      resetTimer();
-    };
-
-    // Listen for all user activity
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('mousedown', handleActivity); 
-    window.addEventListener('keypress', handleActivity);
-    window.addEventListener('scroll', handleActivity);
-    window.addEventListener('click', handleActivity);
-
-    resetTimer(); // Start timer
+    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'click', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, resetTimer));
+    resetTimer();
 
     return () => {
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('mousedown', handleActivity);
-      window.removeEventListener('keypress', handleActivity);
-      window.removeEventListener('scroll', handleActivity);
-      window.removeEventListener('click', handleActivity);
+      events.forEach(e => window.removeEventListener(e, resetTimer));
       clearTimeout(activityTimer);
     };
   }, [navigate]);
 };
-
-export const checkTokenExpiry = () => {
-  const userToken = localStorage.getItem('userToken');
-  const adminToken = localStorage.getItem('adminToken');
-  
-  if (userToken || adminToken) {
-    try {
-      // Decode JWT to check expiry (client-side)
-      const payload = JSON.parse(atob((userToken || adminToken).split('.')[1]));
-      if (payload.exp * 1000 < Date.now()) {
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-        return false;
-      }
-    } catch {
-      localStorage.removeItem('userToken');
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userEmail');
-      return false;
-    }
-  }
-  return true;
-};
-
-

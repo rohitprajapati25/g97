@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
+import { useToast } from "../context/ToastContext";
 import api from "../api/axios";
-import { User, Mail, Phone, Lock, Save, X, CheckCircle, AlertCircle } from "lucide-react";
+import { User, Mail, Phone, Lock, Save } from "lucide-react";
 
 export default function Settings() {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [admin, setAdmin] = useState(null);
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
 
   // Form states
   const [name, setName] = useState("");
@@ -18,31 +18,20 @@ export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+  useEffect(() => { fetchProfile(); }, []);
 
   const fetchProfile = async () => {
     const token = localStorage.getItem("adminToken");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
+    if (!token) { setLoading(false); return; }
     try {
-      const res = await api.get("/admin/me", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get("/admin/me", { headers: { Authorization: `Bearer ${token}` } });
       setAdmin(res.data);
       setName(res.data.name || "");
       setEmail(res.data.email || "");
       setPhone(res.data.phone || "");
     } catch (err) {
-      console.error("Error fetching profile:", err);
-      setError("Failed to load profile");
+      toast('error', 'Error', 'Failed to load profile');
     } finally {
       setLoading(false);
     }
@@ -51,21 +40,16 @@ export default function Settings() {
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError(null);
-    setMessage(null);
-
     const token = localStorage.getItem("adminToken");
-
     try {
-      const res = await api.put("/admin/profile", 
+      const res = await api.put("/admin/profile",
         { name, email, phone },
-        { headers: { Authorization: `Bearer ${token}` }
-      });
-      setMessage(res.data.message);
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setAdmin(prev => ({ ...prev, name, email, phone }));
-      setTimeout(() => setMessage(null), 3000);
+      toast('success', 'Saved', res.data.message || 'Profile updated successfully');
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update profile");
+      toast('error', 'Error', err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -73,34 +57,27 @@ export default function Settings() {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    setPasswordError("");
-    setPasswordSuccess("");
-
     if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match");
+      toast('error', 'Mismatch', 'New passwords do not match');
       return;
     }
-
     if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+      toast('error', 'Too Short', 'Password must be at least 6 characters');
       return;
     }
-
     setSaving(true);
     const token = localStorage.getItem("adminToken");
-
     try {
       const res = await api.put("/admin/password",
         { currentPassword, newPassword },
-        { headers: { Authorization: `Bearer ${token}` }
-      });
-      setPasswordSuccess(res.data.message);
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast('success', 'Updated', res.data.message || 'Password changed successfully');
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setTimeout(() => setPasswordSuccess(null), 3000);
     } catch (err) {
-      setPasswordError(err.response?.data?.message || "Failed to change password");
+      toast('error', 'Error', err.response?.data?.message || 'Failed to change password');
     } finally {
       setSaving(false);
     }
@@ -109,10 +86,7 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-screen bg-darkbg">
-        <div className="relative">
-          <div className="h-16 w-16 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 blur-xl bg-red-600/20 animate-pulse"></div>
-        </div>
+        <div className="h-16 w-16 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
         <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px] mt-6">Loading...</p>
       </div>
     );
@@ -132,21 +106,6 @@ export default function Settings() {
             Account <span className="text-red-600">Settings</span>
           </h2>
         </div>
-
-        {/* Success/Error Messages */}
-        {message && (
-          <div className="mb-6 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl flex items-center gap-3">
-            <CheckCircle className="text-emerald-500" size={20} />
-            <p className="text-emerald-500 text-sm font-bold">{message}</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3">
-            <AlertCircle className="text-red-500" size={20} />
-            <p className="text-red-500 text-sm font-bold">{error}</p>
-          </div>
-        )}
 
         {/* Profile Settings */}
         <div className="bg-zinc-900/50 rounded-[2.5rem] border border-white/5 p-8 mb-8">
@@ -229,20 +188,6 @@ export default function Settings() {
             <Lock className="text-red-500" size={24} />
             Change Password
           </h3>
-
-          {passwordSuccess && (
-            <div className="mb-6 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl flex items-center gap-3">
-              <CheckCircle className="text-emerald-500" size={20} />
-              <p className="text-emerald-500 text-sm font-bold">{passwordSuccess}</p>
-            </div>
-          )}
-
-          {passwordError && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3">
-              <AlertCircle className="text-red-500" size={20} />
-              <p className="text-red-500 text-sm font-bold">{passwordError}</p>
-            </div>
-          )}
 
           <form onSubmit={handlePasswordChange} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

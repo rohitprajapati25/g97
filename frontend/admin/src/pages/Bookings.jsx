@@ -1,915 +1,572 @@
-// import { useEffect, useState } from "react";
-// import api from "../api/axios";
-// import { 
-//   ChevronRight, X, User, Phone, Briefcase, 
-//   Clock, Calendar, Sparkles, CheckCircle2, XCircle,
-//   Search, Filter, Edit2, Trash2, Car
-// } from "lucide-react"; 
 
-// // Convert 24-hour to 12-hour format for display
-// const convertTo12Hour = (time24) => {
-//   if (!time24) return time24;
-//   const [hours, minutes] = time24.split(':');
-//   const h = parseInt(hours, 10);
-//   const ampm = h >= 12 ? 'PM' : 'AM';
-//   const hour12 = h % 12 || 12;
-//   return `${hour12}:${minutes} ${ampm}`;
-// };
-
-// function Bookings() {
-//   const [loading, setLoading] = useState(true);
-//   const [bookings, setBookings] = useState([]);
-//   const [selectedBooking, setSelectedBooking] = useState(null);
-//   const [isEditing, setIsEditing] = useState(false);
-
-//   const [filters, setFilters] = useState({ search: '', status: '', dateFrom: '', service: '' });
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const LIMIT = 15;
-
-//   const fetchBookings = async (page = 1) => {
-//     try {
-//       setLoading(true);
-//       const token = localStorage.getItem("adminToken");
-//       const params = {
-//         page,
-//         limit: LIMIT,
-//         ...filters
-//       };
-//       const res = await api.get("/bookings", {
-//         headers: { Authorization: `Bearer ${token}` },
-//         params
-//       });
-//       setBookings(res.data);
-//       setCurrentPage(page);
-//     } catch (err) {
-//       console.error("Bookings fetch error:", err.response?.data || err.message);
-//       setBookings({bookings: [], pagination: {}});
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchBookings();
-//   }, [filters]);
-
-//   const updateStatus = async (id, status) => {
-//     try {
-//       const token = localStorage.getItem("adminToken");
-//       await api.put(`/bookings/${id}`, { status }, {
-//         headers: { Authorization: `Bearer ${token}` }
-//       });
-//       setSelectedBooking(null); 
-//       fetchBookings();
-//     } catch (err) {
-//       console.error(err);
-//       alert("Status update failed. Please check your connection.");
-//     }
-//   };
-
-//   const deleteBooking = async (id) => {
-//     if (!window.confirm("Are you sure you want to cancel this booking?")) return;
-    
-//     try {
-//       const token = localStorage.getItem("adminToken");
-//       await api.delete(`/bookings/admin/${id}`, {
-//         headers: { Authorization: `Bearer ${token}` }
-//       });
-//       setSelectedBooking(null);
-//       fetchBookings();
-//     } catch (err) {
-//       console.error(err);
-//       alert("Failed to cancel booking.");
-//     }
-//   };
-
-//   const saveEdit = async () => {
-//     try {
-//       const token = localStorage.getItem("adminToken");
-//       const updateData = {
-//         date: selectedBooking.date,
-//         time: selectedBooking.time,
-//         service: selectedBooking.service,
-//         carType: selectedBooking.carType,
-//         userName: selectedBooking.userName,
-//         phone: selectedBooking.phone,
-//         status: selectedBooking.status
-//       };
-      
-//       await api.put(`/bookings/edit/${selectedBooking._id}`, updateData, {
-//         headers: { Authorization: `Bearer ${token}` }
-//       });
-      
-//       setIsEditing(false);
-//       setSelectedBooking(null);
-//       fetchBookings();
-//     } catch (err) {
-//       console.error(err);
-//       alert("Failed to update booking.");
-//     }
-//   };
-
-//   const statusColor = (status) => {
-//     if (status === "Approved" || status === "Completed") return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-//     if (status === "Rejected" || status === "Cancelled") return "bg-red-500/10 text-red-500 border-red-500/20";
-//     return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-//   };
-
-//   return (
-//     <div className="p-8 bg-darkbg min-h-screen text-white font-sans">
-//       <div className="max-w-7xl mx-auto">
-        
-//         {/* HEADER */}
-//         <div className="mb-8">
-//           <div className="flex items-center gap-2 mb-2 text-red-600">
-//             <Sparkles size={16} className="animate-pulse" />
-//             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">Appointment Desk</p>
-//           </div>
-//           <h1 className="text-5xl font-black uppercase italic tracking-tighter">
-//             Service <span className="text-red-600">Requests</span>
-//           </h1>
-//           <div className="h-1 w-24 bg-red-600 mt-4 rounded-full"></div>
-//         </div>
-
-
-//           {/* Filters */}
-//           <div className="mb-8 bg-zinc-950/50 border border-white/10 rounded-3xl p-6 backdrop-blur">
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-//               <input
-//                 type="text"
-//                 placeholder="Search name/phone/service..."
-//                 value={filters.search}
-//                 onChange={(e) => setFilters({...filters, search: e.target.value})}
-//                 className="bg-zinc-900 border border-white/20 rounded-2xl px-4 py-3 text-white placeholder-zinc-500 focus:border-red-500 focus:outline-none w-full"
-//               />
-//               <select 
-//                 value={filters.status}
-//                 onChange={(e) => setFilters({...filters, status: e.target.value})}
-//                 className="bg-zinc-900 border border-white/20 rounded-2xl px-4 py-3 text-white focus:border-red-500 focus:outline-none"
-//               >
-//                 <option value="">All Status</option>
-//                 <option value="Pending">Pending</option>
-//                 <option value="Confirmed">Confirmed</option>
-//                 <option value="Completed">Completed</option>
-//                 <option value="Cancelled">Cancelled</option>
-//               </select>
-//               <input
-//                 type="date"
-//                 value={filters.dateFrom}
-//                 onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-//                 className="bg-zinc-900 border border-white/20 rounded-2xl px-4 py-3 text-white focus:border-red-500 focus:outline-none"
-//               />
-//               <input
-//                 placeholder="Service name"
-//                 value={filters.service}
-//                 onChange={(e) => setFilters({...filters, service: e.target.value})}
-//                 className="bg-zinc-900 border border-white/20 rounded-2xl px-4 py-3 text-white placeholder-zinc-500 focus:border-red-500 focus:outline-none w-full"
-//               />
-//             </div>
-//             <button
-//               onClick={() => fetchBookings(1)}
-//               className="mt-4 bg-red-600 hover:bg-red-500 text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-sm ml-auto block"
-//             >
-//               Filter Results
-//             </button>
-//           </div>
-
-//           {/* Results count */}
-//           <div className="mb-8">
-//             <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">
-//               {bookings.pagination?.total || 0} total bookings
-//             </p>
-//           </div>
-
-//         {/* LOADING */}
-//         {loading ? (
-//           <div className="flex items-center justify-center py-24">
-//             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
-//           </div>
-//         ) : (bookings.bookings || bookings).length === 0 ? (
-//           <div className="text-center py-24">
-//             <div className="bg-zinc-950 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 text-zinc-800 border border-white/5">
-//               <Sparkles size={40} />
-//             </div>
-//             <p className="text-zinc-600 font-black uppercase tracking-[0.4em] text-xs">No bookings found</p>
-//           </div>
-//         ) : (
-//           <div className="grid gap-6">
-//             {(bookings.bookings || bookings).map((b) => (
-//               <div
-//                 key={b._id}
-//                 className="group bg-zinc-900/40 border border-white/5 rounded-[2.5rem] p-6 hover:border-red-600/30 transition-all duration-500 flex items-center justify-between backdrop-blur-sm"
-//               >
-//                 <div className="flex items-center gap-6">
-//                     <div className="h-16 w-16 bg-zinc-950 rounded-2xl border border-white/5 flex items-center justify-center text-zinc-700 group-hover:text-red-600 group-hover:border-red-600/20 transition-all duration-500">
-//                         <User size={28} />
-//                     </div>
-//                     <div>
-//                         <h3 className="text-xl font-black text-white uppercase italic leading-none mb-2 tracking-tight">
-//                             {b.userName || b.name}
-//                         </h3>
-//                         <div className="flex items-center gap-3">
-//                             <span className="h-1.5 w-1.5 bg-red-600 rounded-full"></span>
-//                             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] italic">{b.service}</p>
-//                         </div>
-//                     </div>
-//                 </div>
-
-//                 <div className="hidden md:flex items-center gap-6">
-//                   {/* Date */}
-//                   <div className="text-center px-4">
-//                     <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Date</p>
-//                     <p className="text-sm font-bold text-zinc-300">{b.date || "N/A"}</p>
-//                   </div>
-                  
-//                   {/* Time */}
-//                   <div className="text-center px-4">
-//                     <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Time</p>
-//                     <p className="text-sm font-bold text-zinc-300">{convertTo12Hour(b.time) || "N/A"}</p>
-//                   </div>
-                  
-//                   {/* Status */}
-//                   <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${statusColor(b.status)}`}>
-//                     {b.status || "Pending"}
-//                   </span>
-                  
-//                   <button 
-//                     onClick={() => setSelectedBooking(b)}
-//                     className="h-12 w-12 bg-zinc-950 border border-white/5 rounded-2xl flex items-center justify-center text-zinc-500 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-xl"
-//                   >
-//                     <ChevronRight size={24} />
-//                   </button>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         )}
-//       </div>
-
-//       {/* --- DETAIL/EDIT MODAL --- */}
-//       {selectedBooking && (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-//           <div 
-//             className="absolute inset-0 bg-black/80 backdrop-blur-xl"
-//             onClick={() => { setSelectedBooking(null); setIsEditing(false); }}
-//           ></div>
-          
-//           <div className="relative bg-darknav w-full max-w-lg rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden max-h-[90vh] overflow-y-auto">
-//             {/* Modal Header */}
-//             <div className="p-10 bg-zinc-900/50 border-b border-white/5 sticky top-0 z-10">
-//                 <button 
-//                     onClick={() => { setSelectedBooking(null); setIsEditing(false); }}
-//                     className="absolute top-8 right-8 text-zinc-600 hover:text-white transition-colors"
-//                 >
-//                     <X size={28} />
-//                 </button>
-//                 <div className="bg-red-600 w-12 h-1 rounded-full mb-4"></div>
-//                 <div className="flex items-center justify-between">
-//                   <h2 className="text-3xl font-black uppercase italic tracking-tight text-white">
-//                     {isEditing ? "Edit Booking" : selectedBooking.userName}
-//                   </h2>
-//                   {!isEditing && (
-//                     <button
-//                       onClick={() => setIsEditing(true)}
-//                       className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all"
-//                     >
-//                       <Edit2 size={14} /> Edit
-//                     </button>
-//                   )}
-//                 </div>
-//                 <p className="text-zinc-500 text-[10px] font-black mt-2 tracking-[0.3em] uppercase italic">
-//                   {isEditing ? "Modify booking details" : "Booking Specification"}
-//                 </p>
-//             </div>
-
-//             {/* Modal Content */}
-//             <div className="p-10 space-y-6">
-                
-//                 {/* User Name */}
-//                 <div>
-//                   <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Customer Name</label>
-//                   {isEditing ? (
-//                     <input
-//                       type="text"
-//                       value={selectedBooking.userName || ""}
-//                       onChange={(e) => setSelectedBooking({...selectedBooking, userName: e.target.value})}
-//                       className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-red-600/50"
-//                     />
-//                   ) : (
-//                     <p className="font-black text-xl text-white">{selectedBooking.userName}</p>
-//                   )}
-//                 </div>
-
-//                 {/* Service */}
-//                 <div>
-//                   <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Service</label>
-//                   {isEditing ? (
-//                     <input
-//                       type="text"
-//                       value={selectedBooking.service || ""}
-//                       onChange={(e) => setSelectedBooking({...selectedBooking, service: e.target.value})}
-//                       className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-red-600/50"
-//                     />
-//                   ) : (
-//                     <div className="flex items-center gap-3 p-4 bg-zinc-950 rounded-2xl border border-white/5">
-//                       <Briefcase size={20} className="text-red-600" />
-//                       <p className="font-black text-lg text-white">{selectedBooking.service}</p>
-//                     </div>
-//                   )}
-//                 </div>
-
-//                 {/* Car Type */}
-//                 <div>
-//                   <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Car Type</label>
-//                   {isEditing ? (
-//                     <select
-//                       value={selectedBooking.carType || ""}
-//                       onChange={(e) => setSelectedBooking({...selectedBooking, carType: e.target.value})}
-//                       className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-red-600/50"
-//                     >
-//                       <option value="Hatchback">Hatchback</option>
-//                       <option value="Sedan">Sedan</option>
-//                       <option value="SUV">SUV</option>
-//                       <option value="Luxury">Luxury</option>
-//                     </select>
-//                   ) : (
-//                     <div className="flex items-center gap-3 p-4 bg-zinc-950 rounded-2xl border border-white/5">
-//                       <Car size={20} className="text-zinc-500" />
-//                       <p className="font-bold text-lg text-zinc-300">{selectedBooking.carType}</p>
-//                     </div>
-//                   )}
-//                 </div>
-
-//                 {/* Date & Time Grid */}
-//                 <div className="grid grid-cols-2 gap-4">
-//                     <div>
-//                       <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Date</label>
-//                       {isEditing ? (
-//                         <input
-//                           type="date"
-//                           value={selectedBooking.date || ""}
-//                           onChange={(e) => setSelectedBooking({...selectedBooking, date: e.target.value})}
-//                           className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-red-600/50"
-//                         />
-//                       ) : (
-//                         <div className="flex items-center gap-2 p-3 bg-zinc-950/50 rounded-xl">
-//                           <Calendar size={16} className="text-zinc-500" />
-//                           <p className="font-bold text-zinc-200">{selectedBooking.date}</p>
-//                         </div>
-//                       )}
-//                     </div>
-//                     <div>
-//                       <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Time</label>
-//                       {isEditing ? (
-//                         <input
-//                           type="time"
-//                           value={selectedBooking.time || ""}
-//                           onChange={(e) => setSelectedBooking({...selectedBooking, time: e.target.value})}
-//                           className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-red-600/50"
-//                         />
-//                       ) : (
-//                         <div className="flex items-center gap-2 p-3 bg-zinc-950/50 rounded-xl">
-//                           <Clock size={16} className="text-zinc-500" />
-//                           <p className="font-bold text-zinc-200">{convertTo12Hour(selectedBooking.time)}</p>
-//                         </div>
-//                       )}
-//                     </div>
-//                 </div>
-
-//                 {/* Contact */}
-//                 <div>
-//                   <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Phone</label>
-//                   {isEditing ? (
-//                     <input
-//                       type="tel"
-//                       value={selectedBooking.phone || ""}
-//                       onChange={(e) => setSelectedBooking({...selectedBooking, phone: e.target.value})}
-//                       className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-red-600/50"
-//                     />
-//                   ) : (
-//                     <div className="flex items-center gap-2 p-3 bg-zinc-950/50 rounded-xl">
-//                       <Phone size={16} className="text-zinc-500"/>
-//                       <p className="font-bold text-zinc-200 tracking-widest">{selectedBooking.phone}</p>
-//                     </div>
-//                   )}
-//                 </div>
-
-//                 {/* Status */}
-//                 <div>
-//                   <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Status</label>
-//                   {isEditing ? (
-//                     <select
-//                       value={selectedBooking.status || "Pending"}
-//                       onChange={(e) => setSelectedBooking({...selectedBooking, status: e.target.value})}
-//                       className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-red-600/50"
-//                     >
-//                       <option value="Pending">Pending</option>
-//                       <option value="Approved">Approved</option>
-//                       <option value="Rejected">Rejected</option>
-//                       <option value="Completed">Completed</option>
-//                       <option value="Cancelled">Cancelled</option>
-//                     </select>
-//                   ) : (
-//                     <span className={`inline-block px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border ${statusColor(selectedBooking.status)}`}>
-//                       {selectedBooking.status || "Pending"}
-//                     </span>
-//                   )}
-//                 </div>
-
-//                 {/* Action Buttons */}
-//                 <div className="pt-6 space-y-4">
-//                   {isEditing ? (
-//                     <>
-//                       <div className="grid grid-cols-2 gap-4">
-//                         <button
-//                             onClick={saveEdit}
-//                             className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
-//                         >
-//                             <CheckCircle2 size={18} /> Save Changes
-//                         </button>
-//                         <button
-//                             onClick={() => setIsEditing(false)}
-//                             className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
-//                         >
-//                             Cancel Edit
-//                         </button>
-//                       </div>
-//                     </>
-//                   ) : (
-//                     <>
-//                       {/* Quick Actions */}
-//                       <div className="grid grid-cols-2 gap-4">
-//                         <button
-//                             onClick={() => updateStatus(selectedBooking._id, "Approved")}
-//                             className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
-//                         >
-//                             <CheckCircle2 size={18} /> Approve
-//                         </button>
-//                         <button
-//                             onClick={() => updateStatus(selectedBooking._id, "Rejected")}
-//                             className="flex items-center justify-center gap-2 bg-red-600/80 hover:bg-red-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
-//                         >
-//                             <XCircle size={18} /> Reject
-//                         </button>
-//                       </div>
-                      
-//                       {/* Delete/Cancel Button */}
-//                       <button
-//                           onClick={() => deleteBooking(selectedBooking._id)}
-//                           className="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-red-900/50 border border-red-500/30 text-red-500 hover:text-red-400 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
-//                       >
-//                           <Trash2 size={18} /> Cancel Booking
-//                       </button>
-//                     </>
-//                   )}
-//                 </div>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-// export default Bookings;
-
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "../api/axios";
-import { 
-  ChevronRight, X, User, Phone, Briefcase, 
+import {
+  ChevronRight, X, User, Phone, Briefcase,
   Clock, Calendar, Sparkles, CheckCircle2, XCircle,
-  Edit2, Trash2, Car
-} from "lucide-react"; 
+  Edit2, Trash2, Car, Search, Filter, RefreshCw,
+  ChevronLeft, Timer,
+} from "lucide-react";
+import { BookingRowSkeleton, ErrorState } from "../components/Skeleton";
 
-// Convert 24-hour to 12-hour format
-const convertTo12Hour = (time24) => {
-  if (!time24) return time24;
-  const [hours, minutes] = time24.split(':');
-  const h = parseInt(hours, 10);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const hour12 = h % 12 || 12;
-  return `${hour12}:${minutes} ${ampm}`;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmt12 = (t) => {
+  if (!t) return "—";
+  const [h, m] = t.split(":");
+  const hr = parseInt(h, 10);
+  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
 };
 
-function Bookings() {
-  const [loading, setLoading] = useState(true);
-  const [bookings, setBookings] = useState([]);
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [filters, setFilters] = useState({ search: '', status: '', dateFrom: '', service: '' });
-  const [currentPage, setCurrentPage] = useState(1);
-  const LIMIT = 15;
+const fmtDate = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+};
 
-  const fetchBookings = async (page = 1) => {
+const STATUS_STYLE = {
+  Confirmed: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  Completed: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  Pending:   "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  Cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
+};
+
+const STRIP = {
+  Confirmed: "bg-emerald-500",
+  Completed: "bg-blue-500",
+  Pending:   "bg-amber-400",
+  Cancelled: "bg-red-500",
+};
+
+const StatusBadge = ({ status }) => (
+  <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${STATUS_STYLE[status] || STATUS_STYLE.Pending}`}>
+    {status || "Pending"}
+  </span>
+);
+
+const LIMIT = 15;
+
+function Bookings() {
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState("");
+  const [bookings,        setBookings]        = useState([]);
+  const [pagination,      setPagination]      = useState({});
+  const [currentPage,     setCurrentPage]     = useState(1);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isEditing,       setIsEditing]       = useState(false);
+  const [editData,        setEditData]        = useState({});   // isolated edit copy
+  const [savingEdit,      setSavingEdit]      = useState(false);
+  const [updatingStatus,  setUpdatingStatus]  = useState(null); // id being updated
+
+  // Filters
+  const [search,    setSearch]    = useState("");
+  const [status,    setStatus]    = useState("");
+  const [dateFrom,  setDateFrom]  = useState("");
+  const [service,   setService]   = useState("");
+
+  // Debounce search
+  const searchTimer = useRef(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const handleSearchChange = (val) => {
+    setSearch(val);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => setDebouncedSearch(val), 400);
+  };
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const fetchBookings = useCallback(async (page = 1) => {
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      const token = localStorage.getItem("adminToken");
-      const params = { page, limit: LIMIT, ...filters };
-      const res = await api.get("/bookings", {
-        headers: { Authorization: `Bearer ${token}` },
-        params
-      });
-      setBookings(res.data);
+      const params = {
+        page,
+        limit: LIMIT,
+        ...(debouncedSearch && { search: debouncedSearch }),
+        ...(status   && { status }),
+        ...(dateFrom && { dateFrom }),
+        ...(service  && { service }),
+      };
+      const res = await api.get("/bookings", { params });
+      setBookings(res.data.bookings || []);
+      setPagination(res.data.pagination || {});
       setCurrentPage(page);
     } catch (err) {
-      console.error("Bookings fetch error:", err.response?.data || err.message);
-      setBookings({bookings: [], pagination: {}});
-    } finally { setLoading(false); }
+      setError(err.response?.data?.message || "Failed to load bookings");
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedSearch, status, dateFrom, service]);
+
+  // Re-fetch when filters change (debounced search included)
+  useEffect(() => { fetchBookings(1); }, [fetchBookings]);
+
+  const clearFilters = () => {
+    setSearch(""); setDebouncedSearch("");
+    setStatus(""); setDateFrom(""); setService("");
   };
 
-  useEffect(() => { fetchBookings(); }, [filters]);
+  const hasFilters = debouncedSearch || status || dateFrom || service;
 
-  const updateStatus = async (id, status) => {
+  // ── Status update ──────────────────────────────────────────────────────────
+  const updateStatus = useCallback(async (id, newStatus) => {
+    setUpdatingStatus(id);
     try {
-      const token = localStorage.getItem("adminToken");
-      await api.put(`/bookings/${id}`, { status }, { headers: { Authorization: `Bearer ${token}` } });
-      setSelectedBooking(null); fetchBookings();
-    } catch (err) { console.error(err); alert("Status update failed."); }
+      await api.put(`/bookings/${id}`, { status: newStatus });
+      if (window.toast) window.toast("success", "Updated", `Marked as ${newStatus}`);
+      setSelectedBooking(null);
+      fetchBookings(currentPage);
+    } catch (err) {
+      if (window.toast) window.toast("error", "Error", err.response?.data?.message || "Update failed");
+    } finally {
+      setUpdatingStatus(null);
+    }
+  }, [currentPage, fetchBookings]);
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  const deleteBooking = useCallback(async (id) => {
+    if (!window.confirm("Delete this booking permanently?")) return;
+    try {
+      await api.delete(`/bookings/admin/${id}`);
+      if (window.toast) window.toast("success", "Deleted", "Booking removed");
+      setSelectedBooking(null);
+      fetchBookings(currentPage);
+    } catch (err) {
+      if (window.toast) window.toast("error", "Error", err.response?.data?.message || "Delete failed");
+    }
+  }, [currentPage, fetchBookings]);
+
+  // ── Edit ───────────────────────────────────────────────────────────────────
+  const startEdit = (b) => {
+    setEditData({ ...b });
+    setIsEditing(true);
   };
 
-  const deleteBooking = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
-    try {
-      const token = localStorage.getItem("adminToken");
-      await api.delete(`/bookings/admin/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setSelectedBooking(null); fetchBookings();
-    } catch (err) { console.error(err); alert("Failed to cancel booking."); }
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditData({});
   };
 
   const saveEdit = async () => {
+    setSavingEdit(true);
     try {
-      const token = localStorage.getItem("adminToken");
-      const updateData = { 
-        date: selectedBooking.date,
-        time: selectedBooking.time,
-        service: selectedBooking.service,
-        carType: selectedBooking.carType,
-        userName: selectedBooking.userName,
-        phone: selectedBooking.phone,
-        status: selectedBooking.status
+      const payload = {
+        date:     editData.date,
+        time:     editData.time,
+        service:  editData.service,
+        carType:  editData.carType,
+        userName: editData.userName,
+        phone:    editData.phone,
+        status:   editData.status,
       };
-      await api.put(`/bookings/edit/${selectedBooking._id}`, updateData, { headers: { Authorization: `Bearer ${token}` } });
-      setIsEditing(false); setSelectedBooking(null); fetchBookings();
-    } catch (err) { console.error(err); alert("Failed to update booking."); }
+      await api.put(`/bookings/edit/${editData._id}`, payload);
+      if (window.toast) window.toast("success", "Saved", "Booking updated");
+      setIsEditing(false);
+      setSelectedBooking({ ...selectedBooking, ...payload });
+      fetchBookings(currentPage);
+    } catch (err) {
+      if (window.toast) window.toast("error", "Error", err.response?.data?.message || "Save failed");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
-  const statusColor = (status) => {
-    if (status === "Approved" || status === "Completed") return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-    if (status === "Rejected" || status === "Cancelled") return "bg-red-500/10 text-red-500 border-red-500/20";
-    return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+  // ── Open / close modal ─────────────────────────────────────────────────────
+  const openModal = (b) => {
+    setSelectedBooking(b);
+    setIsEditing(false);
+    setEditData({});
+    document.body.style.overflow = "hidden";
+  };
+  const closeModal = () => {
+    setSelectedBooking(null);
+    setIsEditing(false);
+    setEditData({});
+    document.body.style.overflow = "auto";
   };
 
   return (
-    <div className="p-4 sm:p-8 bg-darkbg min-h-screen text-white font-sans">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 bg-darkbg min-h-screen text-white font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* HEADER */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 mb-2 text-red-600">
-            <Sparkles size={16} className="animate-pulse" />
+        {/* ── Header ── */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles size={14} className="text-red-600 animate-pulse" />
             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">Appointment Desk</p>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black uppercase italic tracking-tighter">
-            Service <span className="text-red-600">Requests</span>
-          </h1>
-          <div className="h-1 w-16 sm:w-24 bg-red-600 mt-2 sm:mt-4 rounded-full"></div>
+          <div className="flex items-end justify-between gap-4">
+            <h1 className="text-3xl sm:text-5xl font-black uppercase italic tracking-tighter">
+              Service <span className="text-red-600">Requests</span>
+            </h1>
+            {pagination.total > 0 && (
+              <p className="text-zinc-500 text-xs font-black uppercase tracking-widest pb-1">
+                {pagination.total} bookings
+              </p>
+            )}
+          </div>
+          <div className="h-1 w-16 bg-red-600 mt-3 rounded-full" />
         </div>
 
-        {/* FILTERS */}
-        <div className="mb-6 sm:mb-8 bg-zinc-950/50 border border-white/10 rounded-3xl p-4 sm:p-6 backdrop-blur">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <input
-              type="text"
-              placeholder="Search name/phone/service..."
-              value={filters.search}
-              onChange={(e) => setFilters({...filters, search: e.target.value})}
-              className="bg-zinc-900 border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-white placeholder-zinc-500 focus:border-red-500 focus:outline-none w-full"
-            />
-            <select 
-              value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className="bg-zinc-900 border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-white focus:border-red-500 focus:outline-none w-full"
+        {/* ── Filter Bar ── */}
+        <div className="bg-zinc-900/60 border border-white/8 rounded-2xl p-4 space-y-3 backdrop-blur">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="text"
+                placeholder="Name, phone, service…"
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full bg-zinc-950 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-white text-sm placeholder-zinc-600 focus:border-red-500/50 focus:outline-none transition-colors"
+              />
+            </div>
+
+            {/* Status */}
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:border-red-500/50 focus:outline-none transition-colors"
             >
-              <option value="">All Status</option>
+              <option value="">All Statuses</option>
               <option value="Pending">Pending</option>
               <option value="Confirmed">Confirmed</option>
               <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
             </select>
+
+            {/* Date */}
             <input
               type="date"
-              value={filters.dateFrom}
-              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-              className="bg-zinc-900 border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-white focus:border-red-500 focus:outline-none w-full"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:border-red-500/50 focus:outline-none transition-colors"
             />
+
+            {/* Service name */}
             <input
-              placeholder="Service name"
-              value={filters.service}
-              onChange={(e) => setFilters({...filters, service: e.target.value})}
-              className="bg-zinc-900 border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-white placeholder-zinc-500 focus:border-red-500 focus:outline-none w-full"
+              type="text"
+              placeholder="Service name…"
+              value={service}
+              onChange={(e) => setService(e.target.value)}
+              className="bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-zinc-600 focus:border-red-500/50 focus:outline-none transition-colors"
             />
           </div>
-          <button
-            onClick={() => fetchBookings(1)}
-            className="mt-3 sm:mt-4 bg-red-600 hover:bg-red-500 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-2xl font-black uppercase tracking-widest text-sm ml-auto block"
-          >
-            Filter Results
-          </button>
-        </div>
 
-        {/* BOOKINGS COUNT */}
-        <div className="mb-4 sm:mb-8">
-          <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">
-            {bookings.pagination?.total || 0} total bookings
-          </p>
-        </div>
-
-        {/* LOADING */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12 sm:py-24">
-            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-red-600"></div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => fetchBookings(1)}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-5 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all">
+              <Filter size={12} /> Apply
+            </button>
+            {hasFilters && (
+              <button onClick={clearFilters}
+                className="flex items-center gap-2 text-zinc-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors">
+                <X size={12} /> Clear
+              </button>
+            )}
+            <button onClick={() => fetchBookings(currentPage)}
+              className="flex items-center gap-2 text-zinc-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors ml-auto">
+              <RefreshCw size={12} /> Refresh
+            </button>
           </div>
-        ) : (bookings.bookings || bookings).length === 0 ? (
-          <div className="text-center py-12 sm:py-24">
-            <div className="bg-zinc-950 w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 text-zinc-800 border border-white/5">
-              <Sparkles size={36} />
+        </div>
+
+        {/* ── Error ── */}
+        {error && !loading && <ErrorState message={error} onRetry={() => fetchBookings(1)} />}
+
+        {/* ── Loading ── */}
+        {loading && (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => <BookingRowSkeleton key={i} />)}
+          </div>
+        )}
+
+        {/* ── Empty ── */}
+        {!loading && !error && bookings.length === 0 && (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 bg-zinc-900 rounded-3xl flex items-center justify-center mx-auto mb-5 border border-white/5">
+              <Sparkles size={32} className="text-zinc-700" />
             </div>
-            <p className="text-zinc-600 font-black uppercase tracking-[0.4em] text-xs">No bookings found</p>
+            <p className="text-zinc-600 font-black uppercase tracking-widest text-xs">
+              {hasFilters ? "No bookings match your filters" : "No bookings yet"}
+            </p>
+            {hasFilters && (
+              <button onClick={clearFilters}
+                className="mt-4 text-red-500 hover:text-red-400 text-[10px] font-black uppercase tracking-widest transition-colors">
+                Clear filters
+              </button>
+            )}
           </div>
-        ) : (
-          <div className="grid gap-4 sm:gap-6">
-            {(bookings.bookings || bookings).map((b) => (
-              <div
-                key={b._id}
-                className="group bg-zinc-900/40 border border-white/5 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-4 sm:gap-6">
-                  <div className="h-12 w-12 sm:h-16 sm:w-16 bg-zinc-950 rounded-2xl border border-white/5 flex items-center justify-center text-zinc-700 group-hover:text-red-600 group-hover:border-red-600/20 transition-all duration-500">
-                    <User size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-black text-white uppercase italic leading-none mb-1 sm:mb-2 tracking-tight">
-                      {b.userName || b.name}
-                    </h3>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <span className="h-1.5 w-1.5 bg-red-600 rounded-full"></span>
-                      <p className="text-zinc-500 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] italic">{b.service}</p>
-                    </div>
-                  </div>
-                </div>
+        )}
 
-                <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <div className="text-center">
-                      <p className="text-[8px] sm:text-[9px] font-black text-zinc-600 uppercase tracking-widest">Date</p>
-                      <p className="text-sm font-bold text-zinc-300">{b.date || "N/A"}</p>
+        {/* ── Booking List ── */}
+        {!loading && !error && bookings.length > 0 && (
+          <>
+            <div className="space-y-2">
+              {bookings.map((b) => (
+                <div key={b._id}
+                  className="group bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden hover:border-red-600/20 transition-all duration-300 cursor-pointer"
+                  onClick={() => openModal(b)}>
+                  <div className="flex">
+                    {/* Status strip */}
+                    <div className={`w-1 flex-shrink-0 ${STRIP[b.status] || "bg-zinc-700"}`} />
+
+                    <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5">
+                      {/* Customer info */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-red-600/10 transition-colors">
+                          <User size={18} className="text-zinc-500 group-hover:text-red-500 transition-colors" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-black text-sm uppercase italic truncate">{b.userName}</p>
+                          <p className="text-zinc-500 text-[10px] font-bold flex items-center gap-1 mt-0.5">
+                            <Phone size={9} /> {b.phone}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Service + meta */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0 sm:justify-center">
+                        <div className="flex items-center gap-1.5 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">
+                          <Briefcase size={10} className="text-red-500" />
+                          <span className="truncate max-w-[120px]">{b.service}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                          <Car size={10} /> {b.carType}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                          <Calendar size={10} /> {fmtDate(b.date)}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                          <Clock size={10} /> {fmt12(b.time)}
+                        </div>
+                      </div>
+
+                      {/* Status + arrow */}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <StatusBadge status={b.status} />
+                        <div className="w-8 h-8 bg-zinc-800 group-hover:bg-red-600 rounded-xl flex items-center justify-center transition-all">
+                          <ChevronRight size={14} className="text-zinc-500 group-hover:text-white transition-colors" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-[8px] sm:text-[9px] font-black text-zinc-600 uppercase tracking-widest">Time</p>
-                      <p className="text-sm font-bold text-zinc-300">{convertTo12Hour(b.time) || "N/A"}</p>
-                    </div>
-                    <span className={`px-3 sm:px-4 py-1 sm:py-2 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest border ${statusColor(b.status)}`}>
-                      {b.status || "Pending"}
-                    </span>
                   </div>
-                  <button 
-                    onClick={() => setSelectedBooking(b)}
-                    className="h-10 w-10 sm:h-12 sm:w-12 bg-zinc-950 border border-white/5 rounded-2xl flex items-center justify-center text-zinc-500 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-xl"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
                 </div>
+              ))}
+            </div>
+
+            {/* ── Pagination ── */}
+            {pagination.pages > 1 && (
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button onClick={() => fetchBookings(currentPage - 1)} disabled={currentPage <= 1}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl text-zinc-400 font-black uppercase tracking-widest text-[10px] disabled:opacity-30 hover:border-red-600/40 transition-all">
+                  <ChevronLeft size={13} /> Prev
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(pagination.pages, 7) }, (_, i) => {
+                    const p = i + 1;
+                    return (
+                      <button key={p} onClick={() => fetchBookings(p)}
+                        className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${
+                          p === currentPage
+                            ? "bg-red-600 text-white"
+                            : "text-zinc-500 hover:bg-zinc-800"
+                        }`}>
+                        {p}
+                      </button>
+                    );
+                  })}
+                  {pagination.pages > 7 && (
+                    <span className="text-zinc-600 text-xs px-1">…{pagination.pages}</span>
+                  )}
+                </div>
+                <button onClick={() => fetchBookings(currentPage + 1)} disabled={currentPage >= pagination.pages}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl text-zinc-400 font-black uppercase tracking-widest text-[10px] disabled:opacity-30 hover:border-red-600/40 transition-all">
+                  Next <ChevronRight size={13} />
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* --- DETAIL/EDIT MODAL --- */}
-{selectedBooking && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-    {/* Backdrop */}
-    <div 
-      className="absolute inset-0 bg-black/80 backdrop-blur-xl"
-      onClick={() => { setSelectedBooking(null); setIsEditing(false); }}
-    ></div>
+      {/* ══════════════════════════════════════════════════════════════════
+          DETAIL / EDIT MODAL
+      ══════════════════════════════════════════════════════════════════ */}
+      {selectedBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={closeModal} />
 
-    {/* Modal Box */}
-    <div className="relative bg-darknav w-full max-w-md sm:max-w-lg rounded-[2rem] sm:rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 overflow-hidden max-h-full sm:max-h-[90vh] overflow-y-auto">
-      
-      {/* Modal Header */}
-      <div className="p-6 sm:p-10 bg-zinc-900/50 border-b border-white/5 sticky top-0 z-10">
-        <button 
-            onClick={() => { setSelectedBooking(null); setIsEditing(false); }}
-            className="absolute top-4 sm:top-6 right-4 sm:right-6 text-zinc-600 hover:text-white transition-colors"
-        >
-            <X size={28} />
-        </button>
+          <div className="relative bg-zinc-950 border border-white/8 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto">
 
-        <div className="bg-red-600 w-12 h-1 rounded-full mb-4"></div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-          <h2 className="text-2xl sm:text-3xl font-black uppercase italic tracking-tight text-white">
-            {isEditing ? "Edit Booking" : selectedBooking.userName}
-          </h2>
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all"
-            >
-              <Edit2 size={14} /> Edit
-            </button>
-          )}
-        </div>
-        <p className="text-zinc-500 text-[9px] sm:text-[10px] font-black mt-2 tracking-[0.3em] uppercase italic">
-          {isEditing ? "Modify booking details" : "Booking Specification"}
-        </p>
-      </div>
-
-      {/* Modal Content */}
-      <div className="p-6 sm:p-10 space-y-6">
-
-        {/* Customer Name */}
-        <div>
-          <label className="text-[9px] sm:text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Customer Name</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={selectedBooking.userName || ""}
-              onChange={(e) => setSelectedBooking({...selectedBooking, userName: e.target.value})}
-              className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-2 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-red-600/50"
-            />
-          ) : (
-            <p className="font-black text-lg sm:text-xl text-white">{selectedBooking.userName}</p>
-          )}
-        </div>
-
-        {/* Service */}
-        <div>
-          <label className="text-[9px] sm:text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Service</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={selectedBooking.service || ""}
-              onChange={(e) => setSelectedBooking({...selectedBooking, service: e.target.value})}
-              className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-2 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-red-600/50"
-            />
-          ) : (
-            <div className="flex items-center gap-3 p-3 sm:p-4 bg-zinc-950 rounded-2xl border border-white/5">
-              <Briefcase size={20} className="text-red-600" />
-              <p className="font-black text-lg sm:text-xl text-white">{selectedBooking.service}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Car Type */}
-        <div>
-          <label className="text-[9px] sm:text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Car Type</label>
-          {isEditing ? (
-            <select
-              value={selectedBooking.carType || ""}
-              onChange={(e) => setSelectedBooking({...selectedBooking, carType: e.target.value})}
-              className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-2 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-red-600/50"
-            >
-              <option value="Hatchback">Hatchback</option>
-              <option value="Sedan">Sedan</option>
-              <option value="SUV">SUV</option>
-              <option value="Luxury">Luxury</option>
-            </select>
-          ) : (
-            <div className="flex items-center gap-3 p-3 sm:p-4 bg-zinc-950 rounded-2xl border border-white/5">
-              <Car size={20} className="text-zinc-500" />
-              <p className="font-bold text-lg sm:text-xl text-zinc-300">{selectedBooking.carType}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Date & Time Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="text-[9px] sm:text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Date</label>
-            {isEditing ? (
-              <input
-                type="date"
-                value={selectedBooking.date || ""}
-                onChange={(e) => setSelectedBooking({...selectedBooking, date: e.target.value})}
-                className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-2 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-red-600/50"
-              />
-            ) : (
-              <div className="flex items-center gap-2 p-3 sm:p-4 bg-zinc-950/50 rounded-xl">
-                <Calendar size={16} className="text-zinc-500" />
-                <p className="font-bold text-zinc-200">{selectedBooking.date}</p>
+            {/* ── Modal Header ── */}
+            <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-white/5 px-6 py-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="w-10 h-1 bg-red-600 rounded-full mb-3" />
+                <h2 className="text-2xl font-black uppercase italic tracking-tight text-white">
+                  {isEditing ? "Edit Booking" : (selectedBooking.userName || "Booking")}
+                </h2>
+                <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] mt-1">
+                  {isEditing ? "Modify booking details" : `Ref #${selectedBooking._id?.slice(-8).toUpperCase()}`}
+                </p>
               </div>
-            )}
-          </div>
-
-          <div>
-            <label className="text-[9px] sm:text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Time</label>
-            {isEditing ? (
-              <input
-                type="time"
-                value={selectedBooking.time || ""}
-                onChange={(e) => setSelectedBooking({...selectedBooking, time: e.target.value})}
-                className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-2 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-red-600/50"
-              />
-            ) : (
-              <div className="flex items-center gap-2 p-3 sm:p-4 bg-zinc-950/50 rounded-xl">
-                <Clock size={16} className="text-zinc-500" />
-                <p className="font-bold text-zinc-200">{convertTo12Hour(selectedBooking.time)}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Phone */}
-        <div>
-          <label className="text-[9px] sm:text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Phone</label>
-          {isEditing ? (
-            <input
-              type="tel"
-              value={selectedBooking.phone || ""}
-              onChange={(e) => setSelectedBooking({...selectedBooking, phone: e.target.value})}
-              className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-2 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-red-600/50"
-            />
-          ) : (
-            <div className="flex items-center gap-2 p-3 sm:p-4 bg-zinc-950/50 rounded-xl">
-              <Phone size={16} className="text-zinc-500"/>
-              <p className="font-bold text-zinc-200 tracking-widest">{selectedBooking.phone}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Status */}
-        <div>
-          <label className="text-[9px] sm:text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block">Status</label>
-          {isEditing ? (
-            <select
-              value={selectedBooking.status || "Pending"}
-              onChange={(e) => setSelectedBooking({...selectedBooking, status: e.target.value})}
-              className="w-full bg-zinc-950 border border-white/10 rounded-2xl py-2 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-red-600/50"
-            >
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          ) : (
-            <span className={`inline-block px-4 py-2 text-xs sm:text-sm rounded-xl font-black uppercase tracking-widest border ${statusColor(selectedBooking.status)}`}>
-              {selectedBooking.status || "Pending"}
-            </span>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="pt-4 sm:pt-6 space-y-4">
-          {isEditing ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                onClick={saveEdit}
-                className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 sm:py-4 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm transition-all"
-              >
-                <CheckCircle2 size={18} /> Save Changes
-              </button>
-              <button
-                onClick={() => setIsEditing(false)}
-                className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-3 sm:py-4 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm transition-all"
-              >
-                Cancel Edit
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  onClick={() => updateStatus(selectedBooking._id, "Approved")}
-                  className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 sm:py-4 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm transition-all"
-                >
-                  <CheckCircle2 size={18} /> Approve
-                </button>
-                <button
-                  onClick={() => updateStatus(selectedBooking._id, "Rejected")}
-                  className="flex items-center justify-center gap-2 bg-red-600/80 hover:bg-red-600 text-white py-3 sm:py-4 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm transition-all"
-                >
-                  <XCircle size={18} /> Reject
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!isEditing && (
+                  <button onClick={() => startEdit(selectedBooking)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
+                    <Edit2 size={12} /> Edit
+                  </button>
+                )}
+                <button onClick={closeModal}
+                  className="w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-xl flex items-center justify-center transition-colors">
+                  <X size={16} className="text-zinc-400" />
                 </button>
               </div>
-              <button
-                onClick={() => deleteBooking(selectedBooking._id)}
-                className="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-red-900/50 border border-red-500/30 text-red-500 hover:text-red-400 py-3 sm:py-4 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm transition-all"
-              >
-                <Trash2 size={18} /> Cancel Booking
-              </button>
-            </>
-          )}
-        </div>
+            </div>
 
-      </div>
-    </div>
-  </div>
-)}
+            {/* ── Modal Body ── */}
+            <div className="p-6 space-y-5">
+
+              {/* Customer Name */}
+              <Field label="Customer Name" icon={<User size={14}/>}>
+                {isEditing
+                  ? <Input value={editData.userName || ""} onChange={(v) => setEditData({...editData, userName: v})} />
+                  : <Value>{selectedBooking.userName}</Value>}
+              </Field>
+
+              {/* Phone */}
+              <Field label="Phone" icon={<Phone size={14}/>}>
+                {isEditing
+                  ? <Input type="tel" value={editData.phone || ""} onChange={(v) => setEditData({...editData, phone: v})} />
+                  : <Value mono>{selectedBooking.phone}</Value>}
+              </Field>
+
+              {/* Service */}
+              <Field label="Service" icon={<Briefcase size={14}/>}>
+                {isEditing
+                  ? <Input value={editData.service || ""} onChange={(v) => setEditData({...editData, service: v})} />
+                  : <Value>{selectedBooking.service}</Value>}
+              </Field>
+
+              {/* Car Type */}
+              <Field label="Vehicle Type" icon={<Car size={14}/>}>
+                {isEditing
+                  ? (
+                    <select value={editData.carType || ""} onChange={(e) => setEditData({...editData, carType: e.target.value})}
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:border-red-500/50 focus:outline-none">
+                      {["Hatchback","Sedan","SUV","Luxury"].map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  )
+                  : <Value>{selectedBooking.carType}</Value>}
+              </Field>
+
+              {/* Date + Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Date" icon={<Calendar size={14}/>}>
+                  {isEditing
+                    ? <Input type="date" value={editData.date || ""} onChange={(v) => setEditData({...editData, date: v})} />
+                    : <Value>{fmtDate(selectedBooking.date)}</Value>}
+                </Field>
+                <Field label="Time" icon={<Clock size={14}/>}>
+                  {isEditing
+                    ? <Input type="time" value={editData.time || ""} onChange={(v) => setEditData({...editData, time: v})} />
+                    : <Value>{fmt12(selectedBooking.time)}</Value>}
+                </Field>
+              </div>
+
+              {/* Status */}
+              <Field label="Status" icon={<Timer size={14}/>}>
+                {isEditing
+                  ? (
+                    <select value={editData.status || "Pending"} onChange={(e) => setEditData({...editData, status: e.target.value})}
+                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:border-red-500/50 focus:outline-none">
+                      {["Pending","Confirmed","Completed","Cancelled"].map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  )
+                  : <StatusBadge status={selectedBooking.status} />}
+              </Field>
+
+              {/* ── Action Buttons ── */}
+              <div className="pt-2 space-y-3">
+                {isEditing ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={saveEdit} disabled={savingEdit}
+                      className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all">
+                      {savingEdit
+                        ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <><CheckCircle2 size={15}/> Save</>}
+                    </button>
+                    <button onClick={cancelEdit}
+                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all">
+                      <X size={15}/> Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Quick status actions — only show relevant ones */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedBooking.status !== "Confirmed" && selectedBooking.status !== "Completed" && (
+                        <button onClick={() => updateStatus(selectedBooking._id, "Confirmed")}
+                          disabled={updatingStatus === selectedBooking._id}
+                          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all">
+                          <CheckCircle2 size={15}/> Confirm
+                        </button>
+                      )}
+                      {selectedBooking.status !== "Cancelled" && (
+                        <button onClick={() => updateStatus(selectedBooking._id, "Cancelled")}
+                          disabled={updatingStatus === selectedBooking._id}
+                          className="flex items-center justify-center gap-2 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all">
+                          <XCircle size={15}/> Cancel
+                        </button>
+                      )}
+                    </div>
+                    {selectedBooking.status !== "Completed" && (
+                      <button onClick={() => updateStatus(selectedBooking._id, "Completed")}
+                        disabled={updatingStatus === selectedBooking._id}
+                        className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all">
+                        <CheckCircle2 size={15}/> Mark Completed
+                      </button>
+                    )}
+                    <button onClick={() => deleteBooking(selectedBooking._id)}
+                      className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-red-900/20 border border-red-500/20 hover:border-red-500/40 text-red-500 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all">
+                      <Trash2 size={15}/> Delete Booking
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// ─── Field / Input / Value helpers ───────────────────────────────────────────
+const Field = ({ label, icon, children }) => (
+  <div>
+    <label className="flex items-center gap-1.5 text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2">
+      <span className="text-zinc-600">{icon}</span> {label}
+    </label>
+    {children}
+  </div>
+);
+
+const Input = ({ type = "text", value, onChange, ...rest }) => (
+  <input
+    type={type}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:border-red-500/50 focus:outline-none transition-colors"
+    {...rest}
+  />
+);
+
+const Value = ({ children, mono }) => (
+  <p className={`text-white font-bold text-sm ${mono ? "font-mono tracking-widest" : ""}`}>
+    {children || "—"}
+  </p>
+);
 
 export default Bookings;

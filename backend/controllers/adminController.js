@@ -207,13 +207,11 @@ exports.loginAdmin = async (req, res) => {
 
     const admin = await Admin.findOne({ email });
     if (!admin) {
-      console.log(`Admin login attempt with non-existent email: ${email}`);
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-      console.log(`Admin login attempt with wrong password for: ${email}`);
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
@@ -230,7 +228,7 @@ exports.loginAdmin = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({ token, admin: { id: admin._id, email: admin.email } });
+    res.json({ token, admin: { id: admin._id, name: admin.name, email: admin.email } });
   } catch (err) {
     console.error("Admin login error:", err);
     res.status(500).json({ message: "Login failed" });

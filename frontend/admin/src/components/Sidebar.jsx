@@ -15,6 +15,11 @@ function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Read admin info from localStorage
+  const adminData = JSON.parse(localStorage.getItem("admin") || "{}");
+  const adminEmail = adminData.email || "admin@autohub.com";
+  const adminName = adminData.name || adminEmail.split("@")[0] || "Admin";
+
   const handleLogout = () => {
     if (window.confirm("Confirm Logout from Auto Hub Admin?")) {
       localStorage.removeItem("adminToken");
@@ -100,8 +105,8 @@ function Sidebar({ isOpen, onClose }) {
               <UserCircle size={24} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-black text-white truncate uppercase">Super Admin</p>
-              <p className="text-[10px] text-zinc-500 truncate">admin@autohub.com</p>
+              <p className="text-xs font-black text-white truncate uppercase">{adminName}</p>
+              <p className="text-[10px] text-zinc-500 truncate">{adminEmail}</p>
             </div>
           </div>
 

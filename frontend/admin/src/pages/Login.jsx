@@ -1,8 +1,9 @@
 
 import { useState } from "react";
+import { useToast } from "../context/ToastContext";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight, ArrowLeft } from "lucide-react";
 import logo from "../assets/logo.png";
 
 const Login = () => {
@@ -10,25 +11,25 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
-  const [success, setSuccess] = useState("");
+  const toast = useToast(); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
     try {
       const response = await api.post("/admin/login", { email, password });
       if (response.data.token) {
         localStorage.setItem("adminToken", response.data.token);
         localStorage.setItem("admin", JSON.stringify(response.data.admin));
-        navigate("/dashboard");
+        toast('success', 'Welcome Back!', 'Redirecting to dashboard...');
+        // Small delay so toast is visible before navigation
+        setTimeout(() => navigate("/dashboard"), 800);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Authentication failed.");
+      // Error toast handled by axios interceptor
     } finally {
       setLoading(false);
     }
@@ -54,8 +55,6 @@ const Login = () => {
 
   const toggleRegister = () => {
     setIsRegister(!isRegister);
-    setError("");
-    setSuccess("");
   };
 
   return (
@@ -64,6 +63,15 @@ const Login = () => {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-red-600/10 blur-[120px] rounded-full" />
 
       <div className="w-full max-w-md z-10">
+        {/* Back nav — above card, left-aligned */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-1.5 text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors mb-6 group"
+        >
+          <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+          Home
+        </button>
+
         <div className="flex flex-col items-center mb-10">
           <div className="flex justify-center">
             <img src={logo} alt="G97 Logo" className="h-[120px] object-contain" />
@@ -80,17 +88,7 @@ const Login = () => {
             </p>
           </div>
 
-          {error && (
-            <div className="mb-6 p-3 bg-red-500/10 border-l-4 border-red-500 text-red-400 text-sm animate-pulse">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-6 p-3 bg-green-500/10 border-l-4 border-green-500 text-green-400 text-sm">
-              {success}
-            </div>
-          )}
+          {/* Toasts handled globally via useToast/useInterceptor */} 
 
           {isRegister ? (
             <form className="space-y-5">

@@ -18,8 +18,9 @@ const bookingSchema = new mongoose.Schema(
     },
     carType: {
       type: String,
-      enum: ["Hatchback", "Sedan", "SUV", "Luxury"],
       required: true,
+      trim: true,
+      maxlength: [50, 'Vehicle type cannot exceed 50 characters'],
     },
     date: {
       type: String,
@@ -31,6 +32,9 @@ const bookingSchema = new mongoose.Schema(
     },
     slot_end: {
       type: String
+    },
+    duration: {
+      type: String  // Stored from service at booking time for accurate overlap checks
     },
     service_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -60,13 +64,16 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
     },
+    userEmail: {
+      type: String
+    },
 
   },
   { timestamps: true }
 );
 
-// Industry slot locking: 1 booking per service_id+date+time (regardless of user)
-bookingSchema.index({ service_id: 1, date: 1, time: 1 }, { unique: true });
+// bookingSchema.index({ service_id: 1, date: 1, time: 1 }, { unique: true }); // REMOVED: conflicts with max_bookings_per_slot > 1
+bookingSchema.index({ service_id: 1, date: 1, time: 1 }); // Non-unique index for query performance
 bookingSchema.index({ service: 1 }); // For title queries
 // Per-user duplicate prevention
 bookingSchema.index({ user: 1, date: 1, time: 1 });

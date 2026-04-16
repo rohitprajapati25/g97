@@ -9,9 +9,9 @@ connectDB();
 
 (async () => {
   // Check if admin already exists
-  const existingAdmin = await Admin.findOne({ email: "pr4901958@gmail.com" });
+  const existingAdmin = await Admin.findOne({ email: "rohit@gmail.com" });
   if (existingAdmin) {
-    console.log("Admin already exists with email: pr4901958@gmail.com");
+    console.log("Admin already exists with email: rohit@gmail.com");
     process.exit();
   }
 
@@ -19,8 +19,8 @@ connectDB();
 
   await Admin.create({
     name: "Admin",
-    email: "pr4901958@gmail.com",
-    phone: "9104318605",
+    email: "rohit@gmail.com",
+    phone: "9898989898",
     password: hashedPassword,
   });
 

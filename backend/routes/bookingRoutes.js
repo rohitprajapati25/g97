@@ -15,17 +15,16 @@ const {
 const { protectAdmin } = require("../middleware/authMiddleware");
 const userAuth = require("../middleware/userAuth");
 
-// User booking routes
-router.post("/", userAuth, createBooking);
-router.get("/check-slot", userAuth, checkSlot);
-router.get("/:service_id/slots", userAuth, getAvailableSlots);
-router.get("/my", userAuth, getUserBookings);
-router.delete("/:id", userAuth, deleteBooking);
+// User booking routes - specific paths MUST come before parameterized routes
+router.post("/",                userAuth,     createBooking);
+router.get("/check-slot",       userAuth,     checkSlot);
+router.get("/my",               userAuth,     getUserBookings);
+router.get("/:service_id/slots",userAuth,     getAvailableSlots);
 
 // Admin booking routes
-router.get("/", protectAdmin, getBookings);
-router.put("/:id", protectAdmin, updateBookingStatus);
-router.put("/edit/:id", protectAdmin, editBooking);
-router.delete("/admin/:id", protectAdmin, deleteBooking);
+router.get("/",                 protectAdmin, getBookings);
+router.put("/edit/:id",         protectAdmin, editBooking);
+router.put("/:id",              protectAdmin, updateBookingStatus);
+router.delete("/admin/:id",     protectAdmin, deleteBooking);
 
 module.exports = router;

@@ -3,20 +3,22 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import api from "../../api/axios";
 import Footer from "../../components/Footer";
+import { ProductCardSkeleton, ErrorStateLight } from "../../components/Skeleton";
 import { 
   ShoppingCart, Trash2, MessageCircle, Lock, 
-  Plus, Minus, X, ShoppingBag, Zap 
+  Plus, Minus, X, ShoppingBag, Zap, ArrowLeft
 } from "lucide-react";
 
 function UserStore() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const navigate = useNavigate();
 
   // --- CONFIGURATION ---
-  const WHATSAPP_NUMBER = "919016710369"; // Apna WhatsApp Number yahan dalein
+  const WHATSAPP_NUMBER = "916359274784"; // Auto Hub Detailing Studio WhatsApp
   const token = localStorage.getItem("userToken");
   const userData = JSON.parse(localStorage.getItem("userData") || "{}");
 
@@ -27,6 +29,7 @@ function UserStore() {
         setProducts(res.data.products || res.data || []);
       } catch (err) {
         console.error("Fetch Error:", err);
+        setError(err.response?.data?.message || "Failed to load products");
         setProducts([]);
       } finally {
         setLoading(false);
@@ -75,7 +78,7 @@ function UserStore() {
     if (cart.length === 0) return alert("Your cart is empty!");
 
     // Formatting Message
-    let message = `*🔥 NEW ORDER: AUTO HUB STORE*\n`;
+    let message = `*🔥 NEW ORDER: AUTO HUB DETAILING STUDIO*\n`;
     message += `━━━━━━━━━━━━━━━━━━━━\n`;
     message += `👤 *Customer:* ${userData.name || "User"}\n`;
     message += `📞 *Phone:* ${userData.phone || "Not Provided"}\n`;
@@ -189,7 +192,16 @@ function UserStore() {
       {/* --- HERO SECTION --- */}
       <section className="bg-slate-950 pt-24 sm:pt-32 lg:pt-40 pb-16 sm:pb-24 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-red-600/10 blur-[120px] rounded-full -mr-32 sm:-mr-48 -mt-32 sm:-mt-48" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+          {/* Back nav */}
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors mb-10 group"
+          >
+            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+            Back
+          </button>
+          <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-6 text-red-600 font-black uppercase tracking-[0.4em] text-[10px]">
             <Zap size={14} fill="currentColor" />
             <span>Authorized Gear Shop</span>
@@ -200,6 +212,7 @@ function UserStore() {
           <p className="text-gray-500 max-w-xl mx-auto text-xs font-bold uppercase tracking-[0.2em] leading-relaxed">
             Professional Grade Detailing Essentials Used By The Masters.
           </p>
+          </div>{/* end text-center */}
         </div>
       </section>
 
@@ -207,9 +220,15 @@ function UserStore() {
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-6">
           {loading ? (
-            <div className="flex flex-col items-center py-20">
-              <div className="animate-spin h-12 w-12 border-4 border-red-600 border-t-transparent rounded-full mb-6"></div>
-              <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Loading Inventory...</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+              {[...Array(8)].map((_, i) => <ProductCardSkeleton key={i} />)}
+            </div>
+          ) : error ? (
+            <ErrorStateLight message={error} onRetry={() => { setLoading(true); setError(""); api.get("/products").then(r => { setProducts(r.data.products || r.data || []); setLoading(false); }).catch(e => { setError(e.response?.data?.message || "Failed to load products"); setLoading(false); }); }} />
+          ) : products.length === 0 ? (
+            <div className="text-center py-20">
+              <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
+              <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No products available right now</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
@@ -246,7 +265,7 @@ function UserStore() {
                 </div>
               ))}
             </div>
-          )}
+            )}
         </div>
       </section>
 

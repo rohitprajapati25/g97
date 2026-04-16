@@ -20,11 +20,11 @@ const serviceSchema = new mongoose.Schema(
     },
     start_time: {
       type: String,
-      default: '09:00'
+      default: '09:30'
     },
     end_time: {
       type: String,
-      default: '18:00'
+      default: '19:00'
     },
     slot_interval: {
       type: Number,

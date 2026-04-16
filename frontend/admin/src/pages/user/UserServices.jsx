@@ -1,331 +1,728 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import api from "../../api/axios";
-import { Sparkles, Clock, Calendar, Car, X, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Sparkles, Clock, Calendar, Car, X, CheckCircle2,
+  AlertCircle, ChevronRight, ArrowLeft, Shield, Timer, Zap,
+} from "lucide-react";
+import { ServiceCardSkeleton, ErrorState } from "../../components/Skeleton";
 
-const formatTime = (time24) => {
-  const [h, m] = time24.split(':');
-  const hour12 = parseInt(h) % 12 || 12;
-  const ampm = parseInt(h) >= 12 ? 'PM' : 'AM';
-  return `${hour12}:${m} ${ampm}`;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmt12 = (t) => {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hr = parseInt(h, 10);
+  const ampm = hr >= 12 ? "PM" : "AM";
+  const h12 = hr % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
 };
 
-const getNextDates = () => {
-  const dates = [];
+const DAYS  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+// toISO uses local date parts — avoids UTC offset shifting the date
+const toISO = (d) => {
+  const y  = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const dy = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${dy}`;
+};
+
+const getNextDates = (n = 30) => {
+  const out = [];
   const today = new Date();
-  today.setHours(0,0,0,0);
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(date.toISOString().split('T')[0]);
+  today.setHours(0, 0, 0, 0);
+  for (let i = 0; i < n; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    out.push(d);
   }
-  return dates;
+  return out;
 };
 
+const DEFAULT_CAR_TYPES = [
+  { id: "Hatchback", icon: "🚗", desc: "Small & compact" },
+  { id: "Sedan",     icon: "🚙", desc: "Standard saloon"  },
+  { id: "SUV",       icon: "🚕", desc: "Sport utility"    },
+  { id: "Luxury",    icon: "🏎️", desc: "Premium class"    },
+];
+
+// ─── Step Indicator ───────────────────────────────────────────────────────────
+const STEP_LABELS = ["Vehicle", "Date", "Time", "Confirm"];
+
+const Steps = ({ current }) => (
+  <div className="flex items-center justify-center gap-0 mb-6">
+    {STEP_LABELS.map((label, i) => {
+      const done   = i < current;
+      const active = i === current;
+      return (
+        <div key={label} className="flex items-center">
+          <div className="flex flex-col items-center">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ${
+                done   ? "bg-emerald-500 text-white" :
+                active ? "bg-red-600 text-white ring-4 ring-red-600/20" :
+                         "bg-zinc-800 text-zinc-600"
+              }`}
+            >
+              {done ? <CheckCircle2 size={14} /> : i + 1}
+            </div>
+            <span
+              className={`text-[9px] font-black uppercase tracking-widest mt-1.5 ${
+                active ? "text-red-500" : done ? "text-emerald-500" : "text-zinc-700"
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+          {i < STEP_LABELS.length - 1 && (
+            <div
+              className={`w-10 sm:w-16 h-px mx-1 mb-5 transition-all duration-500 ${
+                done ? "bg-emerald-500" : "bg-zinc-800"
+              }`}
+            />
+          )}
+        </div>
+      );
+    })}
+  </div>
+);
+
+// ─── Service Card ─────────────────────────────────────────────────────────────
+const ServiceCard = ({ service, onBook }) => (
+  <div className="group bg-zinc-900/60 rounded-3xl border border-white/5 overflow-hidden hover:border-red-600/40 transition-all duration-500 shadow-xl flex flex-col">
+    <div className="relative h-52 overflow-hidden">
+      <img
+        src={service.image || "https://images.unsplash.com/photo-1558618047-3c8c76dfd330"}
+        alt={service.title}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/10">
+        <span className="text-white font-black text-sm">&#8377;{service.price}</span>
+      </div>
+    </div>
+    <div className="p-6 flex flex-col flex-1">
+      <h3 className="text-xl font-black uppercase italic tracking-tighter mb-2 text-white">
+        {service.title}
+      </h3>
+      <p className="text-zinc-500 text-xs leading-relaxed mb-4 line-clamp-2">
+        {service.description}
+      </p>
+      <div className="flex items-center gap-4 mb-5 mt-auto">
+        <div className="flex items-center gap-1.5 text-zinc-500">
+          <Timer size={13} className="text-red-500" />
+          <span className="text-xs font-bold">{service.duration}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-zinc-500">
+          <Zap size={13} className="text-amber-500" />
+          <span className="text-xs font-bold">Instant Confirm</span>
+        </div>
+      </div>
+      <button
+        onClick={() => onBook(service)}
+        className="w-full py-3.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all shadow-lg shadow-red-600/20"
+      >
+        Book Now
+      </button>
+    </div>
+  </div>
+);
+
+// ─── Row helper (used in confirm + success) ───────────────────────────────────
+const Row = ({ label, value, mono }) => (
+  <div className="flex items-center justify-between py-1">
+    <span className="text-zinc-500 text-xs font-black uppercase tracking-widest">{label}</span>
+    <span className={`text-white text-sm font-bold ${mono ? "font-mono text-xs text-zinc-400" : ""}`}>
+      {value}
+    </span>
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const UserServices = () => {
   const navigate = useNavigate();
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  // Services list
+  const [services,  setServices]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState("");
+
+  // Modal / wizard state
   const [selectedService, setSelectedService] = useState(null);
+  const [step,            setStep]            = useState(0); // 0=vehicle 1=date 2=time 3=confirm
 
-  const [bookingForm, setBookingForm] = useState({ 
-    carType: "Sedan", 
-    selectedDate: "", 
-    selectedTime: ""
-  });
+  // Booking form values
+  const [carType,       setCarType]       = useState("Sedan");
+  const [customCarType, setCustomCarType] = useState("");   // user-typed custom vehicle
+  const [isCustomCar,   setIsCustomCar]   = useState(false);
+  const [selectedDate,  setSelectedDate]  = useState(null);   // Date object
+  const [selectedTime,  setSelectedTime]  = useState("");     // "HH:MM"
 
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [bookingStatus, setBookingStatus] = useState('idle');
-  const [errorMsg, setErrorMsg] = useState('');
+  // Slots
+  const [slots,        setSlots]        = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
 
+  // Submission
+  const [submitting,  setSubmitting]  = useState(false);
+  const [bookingDone, setBookingDone] = useState(null);  // booking result object
+  const [errMsg,      setErrMsg]      = useState("");
+
+  // ── Load services ──────────────────────────────────────────────────────────
   useEffect(() => {
-    api.get("/services").then(res => {
-      setServices(res.data.services || res.data || []);
-      setLoading(false);
-    }).catch(() => {
-      setServices([]);
-      setLoading(false);
-    });
+    api.get("/services")
+      .then((r) => { setServices(r.data.services || r.data || []); setLoading(false); })
+      .catch((e) => { setError(e.response?.data?.message || "Failed to load services"); setLoading(false); });
   }, []);
 
-  const fetchAvailableSlots = useCallback(async (serviceId, date) => {
-    if (!serviceId || !date) {
-      console.log('Missing serviceId or date:', serviceId, date);
-      setAvailableSlots([]);
-      return;
-    }
+  // ── Fetch available slots ──────────────────────────────────────────────────
+  const fetchSlots = useCallback(async (serviceId, date) => {
+    if (!serviceId || !date) return;
+    setSlotsLoading(true);
+    setSlots([]);
     try {
-      const res = await api.get(`/bookings/${serviceId}/slots?date=${date}`);
-      setAvailableSlots(res.data.slots || []);
-    } catch (err) {
-      console.error('Slots fetch error:', err.response?.data || err);
-      setAvailableSlots([]);
+      const r = await api.get(`/bookings/${serviceId}/slots?date=${date}`);
+      setSlots(r.data.slots || []);
+    } catch {
+      setSlots([]);
+    } finally {
+      setSlotsLoading(false);
     }
   }, []);
 
-
-  const openTicketModal = (service) => {
-    if (!service || !service._id) {
-      console.error('Service missing _id:', service);
-      return;
-    }
-    if (!localStorage.getItem("userToken")) { 
-      navigate("/user/login"); 
-      return; 
-    }
+  // ── Open / close modal ─────────────────────────────────────────────────────
+  const openModal = (service) => {
+    if (!localStorage.getItem("userToken")) { navigate("/user/login"); return; }
     setSelectedService(service);
-
-    setBookingForm({ carType: "Sedan", selectedDate: "", selectedTime: "" });
-    setAvailableSlots([]);
-    setBookingStatus('idle');
-    setErrorMsg('');
-    document.body.style.overflow = 'hidden';
+    setStep(0);
+    setCarType("Sedan");
+    setCustomCarType("");
+    setIsCustomCar(false);
+    setSelectedDate(null);
+    setSelectedTime("");
+    setSlots([]);
+    setBookingDone(null);
+    setErrMsg("");
+    document.body.style.overflow = "hidden";
   };
 
   const closeModal = () => {
     setSelectedService(null);
-    document.body.style.overflow = 'auto';
+    document.body.style.overflow = "auto";
   };
 
-  const handleDateChange = (date) => {
-    setBookingForm(prev => ({ ...prev, selectedDate: date, selectedTime: "" }));
-    if (selectedService) fetchAvailableSlots(selectedService._id, date);
+  // ── Step helpers ───────────────────────────────────────────────────────────
+  const goNext = () => {
+    // Step 0 validation — if custom, ensure something is typed
+    if (step === 0 && isCustomCar) {
+      const trimmed = customCarType.trim();
+      if (!trimmed) { setErrMsg("Please enter your vehicle type."); return; }
+      setCarType(trimmed);
+      setErrMsg("");
+    }
+    setStep((s) => s + 1);
+  };
+  const goBack = () => { setStep((s) => s - 1); setErrMsg(""); };
+
+  const handleDatePick = (d) => {
+    setSelectedDate(d);
+    setSelectedTime("");
+    fetchSlots(selectedService._id, toISO(d));
+    goNext();
   };
 
-  const handleTimeSelect = (slotStart) => {
-    setBookingForm(prev => ({ ...prev, selectedTime: slotStart }));
-    setErrorMsg('');
+  const handleTimePick = (slot) => {
+    setSelectedTime(slot.slot_start);
+    goNext();
   };
 
+  // ── Submit booking ─────────────────────────────────────────────────────────
   const submitBooking = async () => {
-    const payload = {
-      ...bookingForm,
-      date: bookingForm.selectedDate,
-      time: bookingForm.selectedTime,
-      service: selectedService.title,
-      phone: localStorage.getItem('userPhone') || '+91 9999999999' // Auto-fill
-    };
-    console.log('Booking payload:', payload);
-    if (!payload.date || !payload.time || !payload.service || !payload.phone || !selectedService) {
-      setErrorMsg('Missing required fields: date, time, service, phone');
-      return;
-    }
-    if (!confirm(`Confirm booking "${selectedService.title}"?\nYour details will be auto-filled from registration.`)) {
-      return;
-    }
-    setBookingStatus('loading');
+    const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+    const phone    = localStorage.getItem("userPhone") || userData.phone || "";
+    if (!phone) { setErrMsg("Phone number not found. Please log out and log in again."); return; }
+
+    // Final carType — either preset or custom (already set in goNext)
+    const finalCarType = isCustomCar ? customCarType.trim() : carType;
+    if (!finalCarType) { setErrMsg("Please select or enter your vehicle type."); return; }
+
+    setSubmitting(true);
+    setErrMsg("");
     try {
-      await api.post("/bookings", payload);
-      // REFRESH slots after booking
-      await fetchAvailableSlots(selectedService._id, bookingForm.selectedDate);
-      setBookingStatus('success');
-      setTimeout(closeModal, 2500);
-    } catch (err) {
-      setBookingStatus('error');
-      setErrorMsg(err.response?.data?.message || 'Booking failed');
+      const res = await api.post("/bookings", {
+        date:    toISO(selectedDate),
+        time:    selectedTime,
+        service: selectedService.title,
+        carType: finalCarType,
+        phone,
+      });
+      setBookingDone(res.data);
+    } catch (e) {
+      setErrMsg(e.response?.data?.message || "Booking failed. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="animate-spin h-10 w-10 border-4 border-red-600 border-t-transparent rounded-full" />
-    </div>
-  );
+  // ── Retry services load ────────────────────────────────────────────────────
+  const retryLoad = () => {
+    setLoading(true);
+    setError("");
+    api.get("/services")
+      .then((r) => { setServices(r.data.services || r.data || []); setLoading(false); })
+      .catch((e) => { setError(e.response?.data?.message || "Failed"); setLoading(false); });
+  };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-red-600/30">
-      <Navbar /><br /><br />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-20">
-        {/* Header Section */}
-        <div className="text-center mb-12 sm:mb-20">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 text-[10px] sm:text-xs font-black tracking-[0.2em] text-red-500 uppercase bg-red-500/10 border border-red-500/20 rounded-full">
+    <div className="min-h-screen bg-[#050505] text-white font-sans">
+      <Navbar />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-28 pb-16 lg:pb-20">
+
+        {/* ── Back nav ── */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors mb-10 group"
+        >
+          <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+          Back
+        </button>
+
+        {/* ── Page Header ── */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 text-[10px] font-black tracking-[0.2em] text-red-500 uppercase bg-red-500/10 border border-red-500/20 rounded-full">
             <Sparkles size={12} className="animate-pulse" /> Precision Detailing
           </div>
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black italic uppercase tracking-tighter leading-none mb-6">
-            Elite <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500">Service</span> Menu
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black italic uppercase tracking-tighter leading-none mb-6">
+            Elite{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500">
+              Service
+            </span>{" "}
+            Menu
           </h1>
-          <p className="text-zinc-500 text-xs sm:text-base md:text-lg max-w-2xl mx-auto font-medium leading-relaxed px-4">
-            Professional car care treatments at your fingertips. Secure your slot in seconds with our live studio calendar.
+          <p className="text-zinc-500 text-sm sm:text-base max-w-xl mx-auto font-medium leading-relaxed">
+            Professional car care at your fingertips. Secure your slot in seconds.
           </p>
         </div>
 
-        {/* Services Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {services.map((service) => (
-            <div key={service._id} className="group bg-zinc-900/40 rounded-[2rem] border border-white/5 overflow-hidden hover:border-red-600/40 transition-all duration-500 shadow-xl flex flex-col">
-              <div className="relative h-48 sm:h-56 lg:h-64 overflow-hidden">
-                <img src={service.image || 'https://images.unsplash.com/photo-1558618047-3c8c76dfd330'} alt={service.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
-              </div>
-              <div className="p-6 sm:p-8 flex flex-col flex-1">
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-black uppercase italic tracking-tighter mb-2 sm:mb-3">{service.title}</h3>
-                <p className="text-zinc-500 text-[11px] sm:text-xs lg:text-sm leading-relaxed mb-6 line-clamp-3">{service.description}</p>
-                <div className="mt-auto flex justify-between items-center border-t border-white/5 pt-5 sm:pt-6">
-                  <div className="text-xl sm:text-2xl lg:text-3xl font-black italic text-white">
-                    <span className="text-red-600 mr-1">₹</span>{service.price}
-                  </div>
-                  <button 
-                    onClick={() => openTicketModal(service)}
-                    className="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 sm:px-7 sm:py-3.5 rounded-xl font-black uppercase tracking-widest text-[9px] sm:text-[10px] transition-all active:scale-95"
-                  >
-                    Reserve
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* ── Services Grid ── */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => <ServiceCardSkeleton key={i} />)}
+          </div>
+        ) : error ? (
+          <ErrorState message={error} onRetry={retryLoad} />
+        ) : services.length === 0 ? (
+          <div className="text-center py-20">
+            <Sparkles size={40} className="mx-auto text-zinc-700 mb-4" />
+            <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">
+              No services available right now
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {services.map((s) => (
+              <ServiceCard key={s._id} service={s} onBook={openModal} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* TICKET BOOKING MODAL */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          BOOKING MODAL
+      ══════════════════════════════════════════════════════════════════════ */}
       {selectedService && (
-        <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-zinc-900 border-t sm:border border-white/10 rounded-t-[2.5rem] sm:rounded-[3rem] max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl relative animate-in slide-in-from-bottom duration-300">
-            
-            <button onClick={closeModal} className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors z-50 p-2 bg-zinc-800/50 rounded-full sm:bg-transparent">
-              <X size={20} className="sm:w-8 sm:h-8" />
-            </button>
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={closeModal}
+          />
 
-            {/* Modal Content Header */}
-            <div className="p-6 sm:p-10 lg:p-12 border-b border-white/5">
-              <h2 className="text-xl sm:text-3xl lg:text-4xl font-black italic uppercase tracking-tighter text-white pr-10 leading-tight">
-                {selectedService.title}
-              </h2>
-              <div className="flex items-center gap-3 mt-2 sm:mt-4">
-                <p className="text-red-500 font-black uppercase tracking-[0.15em] text-[9px] sm:text-[11px]">Confirmation Request</p>
-                <div className="h-1 w-1 rounded-full bg-zinc-700" />
-                <p className="text-white font-black italic text-sm sm:text-lg">₹{selectedService.price}</p>
+          {/* Panel */}
+          <div className="relative bg-zinc-950 border border-white/10 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl">
+
+            {/* ── Sticky Header ── */}
+            <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-white/5 px-6 sm:px-8 pt-6 pb-4">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1 pr-4">
+                  <p className="text-red-500 text-[9px] font-black uppercase tracking-[0.25em] mb-1">
+                    Book Service
+                  </p>
+                  <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-white leading-tight">
+                    {selectedService.title}
+                  </h2>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-zinc-400 font-black text-sm">
+                      &#8377;{selectedService.price}
+                    </span>
+                    <span className="text-zinc-700">•</span>
+                    <span className="text-zinc-500 text-xs font-bold flex items-center gap-1">
+                      <Timer size={11} /> {selectedService.duration}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors flex-shrink-0"
+                >
+                  <X size={18} className="text-zinc-400" />
+                </button>
               </div>
+              {!bookingDone && <Steps current={step} />}
             </div>
 
+            {/* ── Modal Body ── */}
+            <div className="px-6 sm:px-8 py-6 sm:py-8">
 
-            <div className="p-6 sm:p-10 lg:p-12 space-y-10 sm:space-y-12">
-              {/* Car Type Selector */}
-              <div>
-                <label className="flex items-center gap-2 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 sm:mb-6"><Car size={14}/> Vehicle Class</label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {["Hatchback", "Sedan", "SUV", "Luxury"].map((type) => (
-                    <button 
-                      key={type}
-                      onClick={() => setBookingForm({...bookingForm, carType: type})}
-                      className={`py-3 sm:py-4 rounded-xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] border transition-all ${
-                        bookingForm.carType === type ? 'bg-red-600 border-red-600 text-white shadow-lg' : 'bg-zinc-950 border-white/10 text-zinc-500'
-                      }`}
+              {/* ── SUCCESS STATE ── */}
+              {bookingDone && (
+                <div className="text-center py-6">
+                  <div className="w-20 h-20 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle2 size={40} className="text-emerald-500" />
+                  </div>
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2">
+                    Booking Confirmed!
+                  </h3>
+                  <p className="text-zinc-400 text-sm mb-8">
+                    Your slot has been reserved. See you at the studio!
+                  </p>
+
+                  {/* Summary */}
+                  <div className="bg-zinc-900 rounded-2xl border border-white/5 p-5 text-left space-y-2 mb-8">
+                    <Row label="Service"  value={bookingDone.service} />
+                    <Row label="Vehicle"  value={bookingDone.carType} />
+                    <Row label="Date"     value={bookingDone.date} />
+                    <Row label="Time"     value={fmt12(bookingDone.time)} />
+                    <div className="border-t border-white/5 pt-3">
+                      <Row label="Ref ID" value={bookingDone._id?.slice(-8).toUpperCase()} mono />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={closeModal}
+                      className="flex-1 py-3.5 bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all"
                     >
-                      {type}
+                      Close
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Date Selection */}
-              <div>
-                <label className="flex items-center gap-2 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 sm:mb-6"><Calendar size={14}/> Select Date</label>
-                <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar snap-x">
-                  {getNextDates().map((date) => {
-                    const isSelected = date === bookingForm.selectedDate;
-                    const d = new Date(date);
-                    return (
-                      <button
-                        key={date}
-                        onClick={() => handleDateChange(date)}
-                        className={`min-w-[75px] sm:min-w-[90px] h-[95px] sm:h-[110px] rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center transition-all border snap-center ${
-                        isSelected ? 'bg-red-600 border-red-600 text-white scale-105 shadow-xl' : 'bg-zinc-950 border-white/10 text-zinc-500 hover:border-red-600/30'
-                      }`}
-                      >
-                        <span className="text-[8px] sm:text-[10px] font-black uppercase mb-1">{d.toLocaleDateString('en-US', {weekday: 'short'})}</span>
-                        <span className="text-xl sm:text-2xl font-black">{d.getDate()}</span>
-                        <span className="text-[8px] sm:text-[10px] font-bold opacity-60 uppercase">{d.toLocaleDateString('en-US', {month: 'short'})}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Time Slots */}
-              {bookingForm.selectedDate && availableSlots.length === 0 && (
-                <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-                  <label className="flex items-center gap-2 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 sm:mb-6"><Clock size={14}/> Loading Slots...</label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 bg-zinc-950/50 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2.5rem] border border-white/5">
-                    <div className="col-span-full text-center py-8 text-zinc-500">Slots loading...</div>
+                    <button
+                      onClick={() => navigate("/user/bookings")}
+                      className="flex-1 py-3.5 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all"
+                    >
+                      My Bookings
+                    </button>
                   </div>
                 </div>
               )}
 
-              {bookingForm.selectedDate && availableSlots.length > 0 && (
-                <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-                  <label className="flex items-center gap-2 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 sm:mb-6"><Clock size={14}/> Available Slots</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 bg-zinc-950/50 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2.5rem] border border-white/5">
-                    {availableSlots.map((slot) => {
-                      const isAvailable = slot.remaining_capacity > 0;
-                      const isSelected = bookingForm.selectedTime === slot.slot_start;
+              {/* ── STEP 0 — Vehicle Type ── */}
+              {!bookingDone && step === 0 && (
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-5 flex items-center gap-2">
+                    <Car size={15} className="text-red-500" /> Select Your Vehicle Type
+                  </h3>
+
+                  {/* Preset options */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {DEFAULT_CAR_TYPES.map((ct) => (
+                      <button
+                        key={ct.id}
+                        onClick={() => { setCarType(ct.id); setIsCustomCar(false); setCustomCarType(""); setErrMsg(""); }}
+                        className={`p-5 rounded-2xl border text-left transition-all duration-200 ${
+                          !isCustomCar && carType === ct.id
+                            ? "bg-red-600/10 border-red-600 ring-1 ring-red-600/30"
+                            : "bg-zinc-900 border-white/5 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="text-3xl mb-2">{ct.icon}</div>
+                        <div className="font-black text-sm text-white uppercase tracking-wide">{ct.id}</div>
+                        <div className="text-zinc-500 text-[10px] font-bold mt-0.5">{ct.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom vehicle option */}
+                  <div
+                    className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                      isCustomCar
+                        ? "border-red-600 bg-red-600/5"
+                        : "border-white/5 bg-zinc-900 hover:border-white/20"
+                    }`}
+                  >
+                    <button
+                      onClick={() => { setIsCustomCar(true); setErrMsg(""); }}
+                      className="w-full flex items-center gap-3 p-4 text-left"
+                    >
+                      <div className="text-2xl">🚘</div>
+                      <div>
+                        <div className={`font-black text-sm uppercase tracking-wide ${isCustomCar ? "text-red-400" : "text-zinc-400"}`}>
+                          Other / Custom
+                        </div>
+                        <div className="text-zinc-600 text-[10px] font-bold mt-0.5">
+                          My vehicle isn't listed above
+                        </div>
+                      </div>
+                      {isCustomCar && (
+                        <div className="ml-auto w-5 h-5 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 size={12} className="text-white" />
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Custom input — slides open */}
+                    {isCustomCar && (
+                      <div className="px-4 pb-4">
+                        <input
+                          type="text"
+                          value={customCarType}
+                          onChange={(e) => { setCustomCarType(e.target.value); setErrMsg(""); }}
+                          placeholder="e.g. Pickup Truck, Van, Convertible…"
+                          maxLength={50}
+                          autoFocus
+                          className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:border-red-500/60 focus:outline-none transition-colors"
+                        />
+                        <p className="text-zinc-600 text-[10px] font-bold mt-2">
+                          {customCarType.length}/50 characters
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Validation error */}
+                  {errMsg && (
+                    <div className="flex items-center gap-2 p-3 mt-3 bg-red-600/10 border border-red-600/20 rounded-xl text-red-400 text-xs font-bold">
+                      <AlertCircle size={14} className="flex-shrink-0" /> {errMsg}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={goNext}
+                    className="w-full py-4 mt-5 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-sm rounded-2xl transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                  >
+                    Continue <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+
+              {/* ── STEP 1 — Date Picker ── */}
+              {!bookingDone && step === 1 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-5">
+                    <button
+                      onClick={goBack}
+                      className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
+                    >
+                      <ArrowLeft size={16} className="text-zinc-400" />
+                    </button>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                      <Calendar size={15} className="text-red-500" /> Pick a Date
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                    {getNextDates(30).map((d) => {
+                      const iso     = toISO(d);
+                      const isToday = iso === toISO(new Date());
+                      const isSel   = selectedDate && toISO(selectedDate) === iso;
                       return (
                         <button
-                          key={`${slot.slot_start}-${slot.slot_end}`}
-                          disabled={!isAvailable}
-                          onClick={() => handleTimeSelect(slot.slot_start)}
-                          className={`py-2.5 sm:py-3 rounded-xl font-bold text-xs transition-all border whitespace-nowrap text-center leading-tight ${
-                            !isAvailable 
-                              ? 'bg-zinc-900 border-transparent text-zinc-700 opacity-50 cursor-not-allowed' 
-                              : isSelected 
-                                ? 'bg-white border-white text-black shadow-lg scale-105 font-black ring-2 ring-red-400' 
-                                : 'bg-zinc-900 border-white/20 text-zinc-400 hover:text-white hover:border-red-500 hover:bg-red-900/30'
+                          key={iso}
+                          onClick={() => handleDatePick(d)}
+                          className={`flex flex-col items-center py-3 px-1 rounded-2xl border transition-all duration-200 hover:border-red-600/50 hover:bg-red-600/5 ${
+                            isSel
+                              ? "bg-red-600 border-red-600 text-white"
+                              : "bg-zinc-900 border-white/5 text-zinc-400"
                           }`}
-                          title={`${slot.remaining_capacity}/${slot.total_capacity} spots`}
                         >
-                          <div className="font-mono">{slot.slot_start}</div>
-                          <div className="text-[10px] opacity-75">{slot.slot_end}</div>
-                          <div className={`text-[10px] mt-1 ${isAvailable ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}`}>
-                            {slot.remaining_capacity}/{slot.total_capacity}
-                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-widest opacity-70">
+                            {DAYS[d.getDay()]}
+                          </span>
+                          <span className="text-lg font-black my-0.5">{d.getDate()}</span>
+                          <span className="text-[9px] font-bold opacity-60">
+                            {MONTHS[d.getMonth()]}
+                          </span>
+                          {isToday && (
+                            <span className="text-[8px] font-black text-red-400 mt-0.5">Today</span>
+                          )}
                         </button>
                       );
                     })}
-                    {availableSlots.length === 0 && (
-                      <div className="col-span-full text-center py-12 text-zinc-500 text-sm">
-                        No available slots for this date
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
 
-              {/* Submit */}
-              <div className="pt-6 sm:pt-8 pb-4 sm:pb-0">
-                {bookingStatus === 'success' ? (
-                  <div className="bg-green-500/10 border border-green-500/20 p-6 sm:p-8 rounded-2xl text-center animate-in fade-in">
-                    <CheckCircle2 size={32} className="text-green-500 mx-auto mb-3" />
-                    <h3 className="text-lg sm:text-xl font-black uppercase italic tracking-tighter text-white mb-2">Booking Confirmed!</h3>
-                    <p className="text-green-400 text-sm">Check your bookings page</p>
-                  </div>
-                ) : (
-                  <>
-                    {errorMsg && (
-                      <div className="flex items-center gap-2 p-4 mb-6 bg-red-600/10 border border-red-600/20 rounded-2xl text-red-400 text-sm font-bold uppercase animate-in slide-in-from-top-2">
-                        <AlertCircle size={16} /> {errorMsg}
-                      </div>
-                    )}
+              {/* ── STEP 2 — Time Slot Picker ── */}
+              {!bookingDone && step === 2 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-5">
                     <button
-                      onClick={submitBooking}
-                      disabled={bookingStatus === 'loading' || !bookingForm.selectedDate || !bookingForm.selectedTime || availableSlots.length === 0}
-                      className="w-full py-5 sm:py-6 lg:py-7 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-base sm:text-xl lg:text-2xl uppercase italic tracking-[0.2em] rounded-2xl shadow-2xl hover:shadow-red-500/25 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95"
+                      onClick={goBack}
+                      className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
                     >
-                      {bookingStatus === 'loading' ? (
-                        <div className="h-6 w-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : `Secure Slot`}
+                      <ArrowLeft size={16} className="text-zinc-400" />
                     </button>
-                    <p className="text-center text-[10px] sm:text-xs text-zinc-600 font-bold uppercase tracking-widest mt-4 opacity-75">
-                      Confirmation creates binding reservation
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+                    <div>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                        <Clock size={15} className="text-red-500" /> Choose a Time Slot
+                      </h3>
+                      {selectedDate && (
+                        <p className="text-zinc-600 text-[10px] font-bold mt-0.5">
+                          {DAYS[selectedDate.getDay()]}, {selectedDate.getDate()}{" "}
+                          {MONTHS[selectedDate.getMonth()]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {slotsLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                      <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">
+                        Loading slots...
+                      </p>
+                    </div>
+                  ) : slots.length === 0 ? (
+                    <div className="text-center py-16">
+                      <Clock size={36} className="mx-auto text-zinc-700 mb-4" />
+                      <p className="text-zinc-400 font-black uppercase tracking-widest text-sm">
+                        No slots available
+                      </p>
+                      <p className="text-zinc-600 text-xs mt-2">Try a different date</p>
+                      <button
+                        onClick={goBack}
+                        className="mt-6 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all"
+                      >
+                        Change Date
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                      {slots.map((slot) => {
+                        const avail = slot.remaining_capacity > 0;
+                        const isSel = selectedTime === slot.slot_start;
+                        return (
+                          <button
+                            key={slot.slot_start}
+                            disabled={!avail}
+                            onClick={() => handleTimePick(slot)}
+                            className={`flex flex-col items-center py-3.5 px-2 rounded-2xl border transition-all duration-200 ${
+                              !avail
+                                ? "bg-zinc-900/50 border-transparent text-zinc-700 cursor-not-allowed opacity-40"
+                                : isSel
+                                  ? "bg-white border-white text-black ring-2 ring-red-500/40"
+                                  : "bg-zinc-900 border-white/10 text-zinc-300 hover:border-red-500/50 hover:bg-red-600/5"
+                            }`}
+                          >
+                            <span className="font-black text-sm font-mono">
+                              {fmt12(slot.slot_start)}
+                            </span>
+                            <span className="text-[9px] font-bold opacity-60 mt-0.5">
+                              {fmt12(slot.slot_end)}
+                            </span>
+                            <span
+                              className={`text-[9px] font-black mt-1.5 ${
+                                avail ? "text-emerald-400" : "text-red-400"
+                              }`}
+                            >
+                              {avail ? `${slot.remaining_capacity} left` : "Full"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── STEP 3 — Review & Confirm ── */}
+              {!bookingDone && step === 3 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <button
+                      onClick={goBack}
+                      className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
+                    >
+                      <ArrowLeft size={16} className="text-zinc-400" />
+                    </button>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                      <Shield size={15} className="text-red-500" /> Review &amp; Confirm
+                    </h3>
+                  </div>
+
+                  {/* Booking summary card */}
+                  <div className="bg-zinc-900 rounded-2xl border border-white/5 overflow-hidden mb-6">
+                    <div className="relative h-28 overflow-hidden">
+                      <img
+                        src={selectedService.image || "https://images.unsplash.com/photo-1558618047-3c8c76dfd330"}
+                        alt={selectedService.title}
+                        className="w-full h-full object-cover opacity-50"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
+                      <div className="absolute bottom-3 left-5">
+                        <h4 className="text-white font-black italic uppercase tracking-tighter text-lg">
+                          {selectedService.title}
+                        </h4>
+                      </div>
+                    </div>
+                    <div className="p-5 space-y-2.5">
+                      <Row
+                        label="Vehicle"
+                        value={`${DEFAULT_CAR_TYPES.find((c) => c.id === carType)?.icon ?? "🚘"} ${carType}`}
+                      />
+                      <Row
+                        label="Date"
+                        value={
+                          selectedDate
+                            ? `${DAYS[selectedDate.getDay()]}, ${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}`
+                            : ""
+                        }
+                      />
+                      <Row label="Time"     value={fmt12(selectedTime)} />
+                      <Row label="Duration" value={selectedService.duration} />
+                      <div className="border-t border-white/5 pt-3 flex items-center justify-between">
+                        <span className="text-zinc-500 text-xs font-black uppercase tracking-widest">
+                          Total
+                        </span>
+                        <span className="text-white font-black text-xl">
+                          &#8377;{selectedService.price}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Error message */}
+                  {errMsg && (
+                    <div className="flex items-center gap-2 p-4 mb-4 bg-red-600/10 border border-red-600/20 rounded-2xl text-red-400 text-sm font-bold">
+                      <AlertCircle size={16} className="flex-shrink-0" /> {errMsg}
+                    </div>
+                  )}
+
+                  {/* Confirm button */}
+                  <button
+                    onClick={submitBooking}
+                    disabled={submitting}
+                    className="w-full py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-base uppercase italic tracking-[0.15em] rounded-2xl shadow-2xl shadow-red-600/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                  >
+                    {submitting ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <><Shield size={18} /> Confirm Booking</>
+                    )}
+                  </button>
+                  <p className="text-center text-[10px] text-zinc-700 font-bold uppercase tracking-widest mt-3">
+                    No payment required now &nbsp;·&nbsp; Pay at studio
+                  </p>
+                </div>
+              )}
+
+            </div>{/* end modal body */}
+          </div>{/* end panel */}
         </div>
-      )}
+      )}{/* end modal */}
+
     </div>
   );
 };
